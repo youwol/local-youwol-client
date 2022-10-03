@@ -35,6 +35,7 @@ template = Template(
               loadDependencies=["@youwol/http-client", "rxjs"]
           )
         ),
+    testConfig='https://github.com/youwol/local-youwol-client/blob/main/src/tests/yw_config',
     userGuide=True
     )
 
