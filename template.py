@@ -32,7 +32,7 @@ template = Template(
     bundles=Bundles(
           mainModule=MainModule(
               entryFile='./index.ts',
-              loadDependencies=["@youwol/http-client", "rxjs"]
+              loadDependencies=["@youwol/http-primitives", "rxjs"]
           )
         ),
     testConfig='https://github.com/youwol/local-youwol-client/blob/main/src/tests/yw_config',
