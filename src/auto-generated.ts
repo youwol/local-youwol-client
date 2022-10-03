@@ -55,7 +55,7 @@ const entries = {
 export const setup = {
     name:'@youwol/local-youwol-client',
         assetId:'QHlvdXdvbC9sb2NhbC15b3V3b2wtY2xpZW50',
-    version:'0.1.2-wip',
+    version:'0.1.2',
     shortDescription:"",
     developerDocumentation:'https://platform.youwol.com/applications/@youwol/cdn-explorer/latest?package=@youwol/local-youwol-client',
     npmPackage:'https://www.npmjs.com/package/@youwol/local-youwol-client',

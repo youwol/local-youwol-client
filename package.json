@@ -1,7 +1,7 @@
 {
     "name": "@youwol/local-youwol-client",
     "description": "",
-    "version": "0.1.2-wip",
+    "version": "0.1.2",
     "author": "greinisch@youwol.com",
     "homepage": "https://github.com/youwol/local-youwol-client#README.md",
     "main": "dist/@youwol/local-youwol-client.js",
@@ -68,6 +68,7 @@
     },
     "youwol": {
         "cdnDependencies": {
+            "@youwol/http-primitives": "^0.1.1",
             "rxjs": "^6.5.5"
         }
     }
