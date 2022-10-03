@@ -1089,10 +1089,10 @@
   resolved "https://registry.yarnpkg.com/@xtuc/long/-/long-4.2.2.tgz#d291c6a4e97989b5c61d9acf396ae4fe133a718d"
   integrity sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==
 
-"@youwol/cdn-client@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@youwol/cdn-client/-/cdn-client-1.0.2.tgz#bf85a98923db73513f917262f2c8a19f4bebc886"
-  integrity sha512-51cMbL7Tm2YEtB+xJPn1ck5vwqG3fClg4TIoybh6++ybh8vQWxxQF2RC3gjXkUkhShTznu5O+x9Y7dgKUrfpDw==
+"@youwol/cdn-client@^1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@youwol/cdn-client/-/cdn-client-1.0.4.tgz#e2d56a6597ad587f12cdd09b32ae5ae324295958"
+  integrity sha512-tGYDs9o1fhBRZ006GB7rSXHVnIKlijL/GOF2g03hHQaJj/f88p2obEVaTArPRfgbGng2xokUhvySvi61WnzhEg==
   dependencies:
     semver "^7.3.4"
 
@@ -1101,10 +1101,18 @@
   resolved "https://registry.yarnpkg.com/@youwol/eslint-config/-/eslint-config-0.0.1.tgz#afc2586b8255a1fa56d17d181c42e1d28a8f8598"
   integrity sha512-x2TawReI63KtrgYWO4CCJOgA3JBexrlWyINmVF19bFGU6PaVzYQgY7K0c6nAPiGLLfPqR9QbhzdaOl9LMtnD0g==
 
-"@youwol/http-clients@^1.0.4":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@youwol/http-clients/-/http-clients-1.0.4.tgz#0171f24724abd8f1224413e3c44fdf7b3f8c75f0"
-  integrity sha512-kbT0BwwIoz1bNt+EAJie11Qx+8jxx20aWStrWJzLYGioGpV+pwOd3qcbYXvX36qGeGIA5q3/WwZYzPLHEU1Neg==
+"@youwol/http-clients@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@youwol/http-clients/-/http-clients-2.0.1.tgz#0e03b77e662632df7cc824ee7143f7eac16f2adf"
+  integrity sha512-f1zTQF0hthsmY48CJtAnJjy90yGyyWAt835l1SIQcol2YV0AKtSr+zJHCSclDw/10af1GGgc+A2Sr9M7uWJeEg==
+  dependencies:
+    "@youwol/http-primitives" "^0.1.1"
+    rxjs "^6.5.5"
+
+"@youwol/http-primitives@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@youwol/http-primitives/-/http-primitives-0.1.1.tgz#1a097ba46513d792c0ea4ac86b8ba6ddcf27442a"
+  integrity sha512-HddZHRdTwl/iteTGdhNUbZJ5Uq49A7XXb6JTowZx3jL95lcRZu4ccD+AQKpW6Hz7SppfEZ1o/+hXu4aysSIewQ==
   dependencies:
     rxjs "^6.5.5"
 
