@@ -1,13 +1,7 @@
 import { combineLatest } from 'rxjs'
 import { map, reduce, take, tap } from 'rxjs/operators'
-import { raiseHTTPErrors, Test } from '@youwol/http-clients'
+import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
-
-export function resetPyYouwolDbs$(headers: { [k: string]: string } = {}) {
-    return new PyYouwolClient(headers).admin.customCommands.doGet$({
-        name: 'reset',
-    })
-}
 
 export function uniqueProjectName(prefix: string) {
     const now = new Date()
@@ -28,14 +22,14 @@ export function expectBuildStep(stepResp) {
 
 export function expectPublishLocal(stepResp) {
     expect(stepResp.manifest).toBeTruthy()
-    Test.expectAttributes(stepResp.manifest, [
+    expectAttributes(stepResp.manifest, [
         'succeeded',
         'fingerprint',
         'creationDate',
         'cmdOutputs',
     ])
     expect(stepResp.manifest.succeeded).toBeTruthy()
-    Test.expectAttributes(stepResp.manifest.cmdOutputs, [
+    expectAttributes(stepResp.manifest.cmdOutputs, [
         'name',
         'version',
         'id',
@@ -46,30 +40,21 @@ export function expectPublishLocal(stepResp) {
     ])
 }
 
-export function expectPublishRemote(stepResp) {
-    expect(stepResp.status).toBe('OK')
-}
-
 export function expectFlowStatus(resp, projectName) {
     expect(resp.projectId).toEqual(
         Buffer.from(projectName, 'utf8').toString('base64'),
     )
     expect(resp.steps).toHaveLength(3)
     resp.steps.forEach((step) => {
-        Test.expectAttributes(step, [
-            'projectId',
-            'flowId',
-            'stepId',
-            'artifacts',
-        ])
+        expectAttributes(step, ['projectId', 'flowId', 'stepId', 'artifacts'])
         expect(step.status).toBe('none')
     })
 }
 
 export function expectProjectsStatus(resp, projectName) {
     expect(resp.results).toHaveLength(1)
-    Test.expectAttributes(resp.results[0], ['path', 'name', 'version', 'id'])
-    Test.expectAttributes(resp.results[0]['pipeline'], [
+    expectAttributes(resp.results[0], ['path', 'name', 'version', 'id'])
+    expectAttributes(resp.results[0]['pipeline'], [
         'target',
         'tags',
         'steps',
@@ -79,12 +64,12 @@ export function expectProjectsStatus(resp, projectName) {
 }
 
 export function expectProjectStatus(resp) {
-    Test.expectAttributes(resp, [
+    expectAttributes(resp, [
         'projectId',
         'projectName',
         'workspaceDependencies',
     ])
-    Test.expectAttributes(resp.workspaceDependencies, [
+    expectAttributes(resp.workspaceDependencies, [
         'above',
         'below',
         'dag',
@@ -93,14 +78,14 @@ export function expectProjectStatus(resp) {
 }
 
 export function expectEnvironment(resp) {
-    Test.expectAttributes(resp, [
+    expectAttributes(resp, [
         'configuration',
         'users',
         'userInfo',
         'remoteGatewayInfo',
         'remotesInfo',
     ])
-    Test.expectAttributes(resp.configuration, [
+    expectAttributes(resp.configuration, [
         'availableProfiles',
         'httpPort',
         'openidHost',
@@ -112,14 +97,14 @@ export function expectEnvironment(resp) {
 }
 
 export function expectUpdateStatus(resp) {
-    Test.expectAttributes(resp, [
+    expectAttributes(resp, [
         'packageName',
         'localVersionInfo',
         'remoteVersionInfo',
         'status',
     ])
-    Test.expectAttributes(resp.localVersionInfo, ['version', 'fingerprint'])
-    Test.expectAttributes(resp.remoteVersionInfo, ['version', 'fingerprint'])
+    expectAttributes(resp.localVersionInfo, ['version', 'fingerprint'])
+    expectAttributes(resp.remoteVersionInfo, ['version', 'fingerprint'])
 }
 
 export function expectPipelineStepEvents$(pyYouwol: PyYouwolClient) {
@@ -153,10 +138,10 @@ export function expectArtifacts$(pyYouwol: PyYouwolClient, projectId: string) {
         pyYouwol.admin.projects.webSocket.artifacts$({ projectId }),
     ]).pipe(
         tap(([respHttp, respWs]) => {
-            Test.expectAttributes(respHttp, ['artifacts'])
+            expectAttributes(respHttp, ['artifacts'])
             expect(respHttp.artifacts).toHaveLength(1)
             expect(respHttp.artifacts[0].id).toBe('dist')
-            Test.expectAttributes(respWs.attributes, ['projectId', 'flowId'])
+            expectAttributes(respWs.attributes, ['projectId', 'flowId'])
             expect(respWs.data).toEqual(respHttp)
         }),
     )

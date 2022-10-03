@@ -3,12 +3,12 @@ import {
     CallerRequestOptions,
     HTTPResponse$,
     WebSocketResponse$,
-} from '@youwol/http-clients'
+    filterCtxMessage,
+} from '@youwol/http-primitives'
 
 import { filter } from 'rxjs/operators'
 import { WsRouter } from '../../py-youwol.client'
 import { ContextMessage, GetFileContentResponse } from '../../interfaces'
-import { filterCtxMessage } from '../../utils'
 
 export type Kind = 'package' | 'data' | 'flux-project' | 'story'
 export type DownloadEventType = 'enqueued' | 'started' | 'succeeded' | 'failed'

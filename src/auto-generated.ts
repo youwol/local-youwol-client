@@ -1,16 +1,16 @@
 
 const runTimeDependencies = {
     "externals": {
-        "@youwol/http-clients": "^1.0.4",
+        "@youwol/http-primitives": "^0.1.1",
         "rxjs": "^6.5.5"
     },
     "includedInBundle": {}
 }
 const externals = {
-    "@youwol/http-clients": {
-        "commonjs": "@youwol/http-clients",
-        "commonjs2": "@youwol/http-clients",
-        "root": "@youwol/http-clients_APIv1"
+    "@youwol/http-primitives": {
+        "commonjs": "@youwol/http-primitives",
+        "commonjs2": "@youwol/http-primitives",
+        "root": "@youwol/http-primitives_APIv01"
     },
     "rxjs": {
         "commonjs": "rxjs",
@@ -27,9 +27,9 @@ const externals = {
     }
 }
 const exportedSymbols = {
-    "@youwol/http-clients": {
-        "apiKey": "1",
-        "exportedSymbol": "@youwol/http-clients"
+    "@youwol/http-primitives": {
+        "apiKey": "01",
+        "exportedSymbol": "@youwol/http-primitives"
     },
     "rxjs": {
         "apiKey": "6",
@@ -39,7 +39,7 @@ const exportedSymbols = {
 
 // eslint-disable-next-line @typescript-eslint/ban-types -- allow to allow no secondary entries
 const mainEntry : Object = {
-    "entryFile": "lib/index.ts",
+    "entryFile": "./index.ts",
     "loadDependencies": [
         "@youwol/http-client",
         "rxjs"
@@ -49,7 +49,7 @@ const mainEntry : Object = {
 // eslint-disable-next-line @typescript-eslint/ban-types -- allow to allow no secondary entries
 const secondaryEntries : Object = {}
 const entries = {
-     '@youwol/local-youwol-client': 'lib/index.ts',
+     '@youwol/local-youwol-client': './index.ts',
     ...Object.values(secondaryEntries).reduce( (acc,e) => ({...acc, [`@youwol/local-youwol-client/${e.name}`]:e.entryFile}), {})
 }
 export const setup = {

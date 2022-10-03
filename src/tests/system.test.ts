@@ -1,8 +1,8 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
 import { mergeMap, tap } from 'rxjs/operators'
-import { raiseHTTPErrors, Test } from '@youwol/http-clients'
-Test.mockRequest()
-import { PyYouwolClient, setup$ } from '../lib'
+import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
+import { PyYouwolClient } from '../lib'
+import { setup$ } from './local-youwol-test-setup'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -21,7 +21,7 @@ test('pyYouwol.admin.system.queryRootLogs', (done) => {
         .queryRootLogs$({ fromTimestamp: Date.now(), maxCount: 100 })
         .pipe(raiseHTTPErrors())
         .subscribe((resp) => {
-            Test.expectAttributes(resp.logs[0], [
+            expectAttributes(resp.logs[0], [
                 'level',
                 'attributes',
                 'labels',
@@ -31,7 +31,7 @@ test('pyYouwol.admin.system.queryRootLogs', (done) => {
                 'timestamp',
             ])
             // This has to be the last log
-            Test.expectAttributes(resp.logs[0].attributes, [
+            expectAttributes(resp.logs[0].attributes, [
                 'router',
                 'method',
                 'traceId',
@@ -53,7 +53,7 @@ test('pyYouwol.admin.system.queryLogs', (done) => {
             raiseHTTPErrors(),
         )
         .subscribe((resp) => {
-            Test.expectAttributes(resp, ['logs'])
+            expectAttributes(resp, ['logs'])
             expect(resp.logs.length).toBeGreaterThan(1)
             done()
         })
@@ -91,7 +91,7 @@ test('pyYouwol.admin.system.queryFolderContent', (done) => {
         .pipe(raiseHTTPErrors())
         .subscribe((resp) => {
             // the folder is py-youwol/youwol
-            Test.expectAttributes(resp, ['files', 'folders'])
+            expectAttributes(resp, ['files', 'folders'])
             expect(resp.files.find((f) => f == 'main.py')).toBeTruthy()
             expect(resp.folders.find((f) => f == 'routers')).toBeTruthy()
             done()

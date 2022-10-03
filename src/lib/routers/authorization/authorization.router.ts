@@ -2,7 +2,7 @@ import {
     Router,
     CallerRequestOptions,
     HTTPResponse$,
-} from '@youwol/http-clients'
+} from '@youwol/http-primitives'
 import { GetAccessTokenResponse } from './interfaces'
 
 export class AuthorizationRouter extends Router {

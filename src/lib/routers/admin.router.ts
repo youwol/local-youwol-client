@@ -1,4 +1,4 @@
-import { Router } from '@youwol/http-clients'
+import { Router } from '@youwol/http-primitives'
 import { CustomCommandsRouter } from './custom-commands'
 import { EnvironmentRouter } from './environment'
 import { LocalCdnRouter } from './local-cdn'

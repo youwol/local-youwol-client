@@ -4,10 +4,10 @@ import {
     HTTPResponse$,
     Json,
     WebSocketResponse$,
-} from '@youwol/http-clients'
+    filterCtxMessage,
+} from '@youwol/http-primitives'
 
 import { WsRouter } from '../../py-youwol.client'
-import { filterCtxMessage } from '../../utils'
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE'
 

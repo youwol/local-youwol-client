@@ -3,7 +3,8 @@ import {
     CallerRequestOptions,
     HTTPResponse$,
     WebSocketResponse$,
-} from '@youwol/http-clients'
+    filterCtxMessage,
+} from '@youwol/http-primitives'
 
 import {
     EnvironmentStatusResponse,
@@ -16,7 +17,6 @@ import {
 } from './interfaces'
 import { WsRouter } from '../../py-youwol.client'
 import { GetFileContentResponse } from '../../interfaces'
-import { filterCtxMessage } from '../../utils'
 
 class WebSocketAPI {
     constructor(public readonly ws: WsRouter) {}

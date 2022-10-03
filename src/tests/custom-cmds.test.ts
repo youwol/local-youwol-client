@@ -1,10 +1,10 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
-import { raiseHTTPErrors, Test } from '@youwol/http-clients'
-Test.mockRequest()
-import { PyYouwolClient, setup$ } from '../lib'
+import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
+import { PyYouwolClient } from '../lib'
 
 import { combineLatest } from 'rxjs'
 import { reduce, take, tap } from 'rxjs/operators'
+import { setup$ } from './local-youwol-test-setup'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -39,7 +39,7 @@ test('pyYouwol.admin.customCommands.doPost$', (done) => {
         .pipe(
             tap(([respHttp, respWs]) => {
                 expect(respHttp).toEqual({ status: 'test-cmd-post ok' })
-                Test.expectAttributes(respWs[0], [
+                expectAttributes(respWs[0], [
                     'level',
                     'attributes',
                     'labels',

@@ -1,11 +1,13 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
-import { AssetsGateway, raiseHTTPErrors, Test } from '@youwol/http-clients'
-Test.mockRequest()
-import { Client, install } from '@youwol/cdn-client'
+import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
+import { AssetsGateway } from '@youwol/http-clients'
+
+import { install } from '@youwol/cdn-client'
 import { combineLatest, from } from 'rxjs'
 import { mergeMap, reduce, take, tap } from 'rxjs/operators'
-import { PyYouwolClient, setup$ } from '../lib'
+import { PyYouwolClient } from '../lib'
 import { expectDownloadEvents$, expectUpdateStatus } from './utils'
+import { setup$ } from './local-youwol-test-setup'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -51,7 +53,6 @@ test('pyYouwol.admin.local-cdn.collectUpdates - empty', (done) => {
 })
 
 test('install & pyYouwol.admin.local-cdn.collectUpdates', (done) => {
-    Client.HostName = Test.getPyYouwolBasePath()
     const httpClientsPackageId = window.btoa('@youwol/http-clients')
     from(
         install({
@@ -67,24 +68,25 @@ test('install & pyYouwol.admin.local-cdn.collectUpdates', (done) => {
                 return pyYouwol.admin.localCdn.webSocket.downloadedPackage$()
             }),
             tap((resp) => {
-                Test.expectAttributes(resp.attributes, [
+                expectAttributes(resp.attributes, [
                     'packageName',
                     'packageVersion',
                 ])
-                Test.expectAttributes(resp.data, [
+                expectAttributes(resp.data, [
                     'packageName',
                     'versions',
                     'version',
                     'fingerprint',
                 ])
             }),
-            take(2),
+            take(3),
             reduce((acc, e) => {
                 return [...acc, e]
             }, []),
             tap((updates) => {
                 expect(updates.map((p) => p.data.packageName).sort()).toEqual([
                     '@youwol/http-clients',
+                    '@youwol/http-primitives',
                     'rxjs',
                 ])
             }),
@@ -94,7 +96,7 @@ test('install & pyYouwol.admin.local-cdn.collectUpdates', (done) => {
                     .pipe(raiseHTTPErrors())
             }),
             tap((respHttp) => {
-                expect(respHttp.updates).toHaveLength(2)
+                expect(respHttp.updates).toHaveLength(3)
                 const httpClient = respHttp.updates.find(
                     (update) => update.packageName == '@youwol/http-clients',
                 )
@@ -109,10 +111,11 @@ test('install & pyYouwol.admin.local-cdn.collectUpdates', (done) => {
                 ])
             }),
             tap(([respHttp, respWs]) => {
-                expect(respHttp.packages).toHaveLength(2)
+                expect(respHttp.packages).toHaveLength(3)
                 expect(respWs.data).toEqual(respHttp)
                 expect(respHttp.packages.map((p) => p.name).sort()).toEqual([
                     '@youwol/http-clients',
+                    '@youwol/http-primitives',
                     'rxjs',
                 ])
                 expect(respWs.attributes.topic).toBe('cdn')
@@ -132,7 +135,7 @@ test('install & pyYouwol.admin.local-cdn.collectUpdates', (done) => {
             tap(([respHttp, respWs]) => {
                 expect(respHttp.name).toBe('@youwol/http-clients')
                 expect(respHttp.versions).toHaveLength(1)
-                Test.expectAttributes(respHttp.versions[0], [
+                expectAttributes(respHttp.versions[0], [
                     'version',
                     'filesCount',
                     'entryPointSize',
@@ -159,8 +162,6 @@ test('install & pyYouwol.admin.local-cdn.collectUpdates', (done) => {
 })
 
 test('download', (done) => {
-    Client.HostName = Test.getPyYouwolBasePath()
-
     expectDownloadEvents$(pyYouwol).subscribe(() => done())
 
     pyYouwol.admin.localCdn

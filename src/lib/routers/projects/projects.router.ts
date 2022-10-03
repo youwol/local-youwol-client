@@ -3,7 +3,8 @@ import {
     CallerRequestOptions,
     HTTPResponse$,
     WebSocketResponse$,
-} from '@youwol/http-clients'
+    filterCtxMessage,
+} from '@youwol/http-primitives'
 
 import {
     GetProjectsStatusResponse,
@@ -23,7 +24,6 @@ import {
     CreateProjectFromTemplateResponse,
 } from './interfaces'
 import { WsRouter } from '../../py-youwol.client'
-import { filterCtxMessage } from '../../utils'
 
 class WebSocketAPI {
     constructor(public readonly ws: WsRouter) {}

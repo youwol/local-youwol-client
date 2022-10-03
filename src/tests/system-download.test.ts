@@ -1,7 +1,12 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
 
-import { raiseHTTPErrors, Test } from '@youwol/http-clients'
-Test.mockRequest()
+import {
+    raiseHTTPErrors,
+    RootRouter,
+    expectAttributes,
+    send,
+} from '@youwol/http-primitives'
+
 import {
     mergeMap,
     reduce,
@@ -10,23 +15,21 @@ import {
     takeWhile,
     tap,
 } from 'rxjs/operators'
-import {
-    ContextMessage,
-    DownloadEvent,
-    GetCdnStatusResponse,
-    PackageEventResponse,
-    PyYouwolClient,
-    ResetCdnResponse,
-    setup$,
-} from '../lib'
+import { ContextMessage, PyYouwolClient } from '../lib'
 
-import { Client, install, State } from '@youwol/cdn-client'
+import { install, State } from '@youwol/cdn-client'
 import { merge, Observable, of } from 'rxjs'
 import { remoteDataFileAssetId, remoteFluxAssetId } from './remote_assets_id'
+import { getAsset, shell$ } from './shell'
+import { setup$ } from './local-youwol-test-setup'
+import { DownloadEvent } from '../lib/routers/system'
+import {
+    GetCdnStatusResponse,
+    PackageEventResponse,
+    ResetCdnResponse,
+} from '../lib/routers/local-cdn'
 
 const pyYouwol = new PyYouwolClient()
-
-Client.HostName = Test.getPyYouwolBasePath()
 
 // 10 seconds is enough when running cdn-backend locally, but not enough if ran using minio client
 jest.setTimeout(15 * 1000)
@@ -110,7 +113,7 @@ test('install package rxjs + clear + install package rxjs', (done) => {
             mergeMap(() => pyYouwol.admin.localCdn.resetCdn$()),
             raiseHTTPErrors(),
             tap((resp: ResetCdnResponse) => {
-                Test.expectAttributes(resp, ['deletedPackages'])
+                expectAttributes(resp, ['deletedPackages'])
                 expect(resp.deletedPackages).toEqual(['rxjs'])
                 State.resetCache()
             }),
@@ -132,13 +135,15 @@ test('download flux-builder#latest from app URL', (done) => {
             'YTZjZDhlMzYtYTE5ZC00YTI5LTg3NGQtMDRjMTI2M2E5YjA3'
     }
 
-    Test.shell$<Context>(new Context())
+    shell$<Context>(new Context())
         .pipe(
-            Test.send<string, Context>({
+            send<string, Context>({
                 inputs: (shell) => {
                     return {
                         commandType: 'query',
-                        path: `${Test.getPyYouwolBasePath()}/applications/@youwol/flux-builder/latest?id=${window.atob(
+                        path: `${
+                            RootRouter.HostName
+                        }/applications/@youwol/flux-builder/latest?id=${window.atob(
                             shell.context.assetId,
                         )}`,
                     }
@@ -195,24 +200,26 @@ function test_download_asset(assetId: string, basePath: string) {
         public readonly assetId = assetId
     }
 
-    return Test.shell$<Context>(new Context()).pipe(
+    return shell$<Context>(new Context()).pipe(
         // make sure the asset exist and can be retrieved from deployed env
-        Test.AssetsBackend.getAsset({
-            inputs: (shell) => {
+        getAsset(
+            (shell) => {
                 return {
                     assetId: shell.context.assetId,
                 }
             },
-            sideEffects: (response, shell) => {
-                expect(response.assetId).toBe(shell.context.assetId)
+            {
+                sideEffects: (response, shell) => {
+                    expect(response.assetId).toBe(shell.context.assetId)
+                },
             },
-        }),
-        Test.send<string, Context>({
+        ),
+        send<string, Context>({
             inputs: (shell) => {
                 const rawId = window.atob(shell.context.assetId)
                 return {
                     commandType: 'query',
-                    path: `${Test.getPyYouwolBasePath()}/api/assets-gateway/${basePath}/${rawId}`,
+                    path: `${RootRouter.HostName}/api/assets-gateway/${basePath}/${rawId}`,
                 }
             },
             sideEffects: (response) => {

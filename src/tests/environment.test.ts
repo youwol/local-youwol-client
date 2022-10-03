@@ -1,11 +1,15 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
 
-import { onHTTPErrors, raiseHTTPErrors, Test } from '@youwol/http-clients'
-Test.mockRequest()
+import {
+    onHTTPErrors,
+    raiseHTTPErrors,
+    expectAttributes,
+} from '@youwol/http-primitives'
 import { combineLatest } from 'rxjs'
 import { mergeMap, take, tap } from 'rxjs/operators'
-import { PyYouwolClient, setup$ } from '../lib'
+import { PyYouwolClient } from '../lib'
 import { expectEnvironment } from './utils'
+import { setup$ } from './local-youwol-test-setup'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -23,7 +27,7 @@ test('pyYouwol.admin.environment.login', (done) => {
         .login$({ body: { email: 'int_tests_yw-users_bis@test-user' } })
         .pipe(raiseHTTPErrors())
         .subscribe((resp) => {
-            Test.expectAttributes(resp, ['id', 'name', 'email', 'memberOf'])
+            expectAttributes(resp, ['id', 'name', 'email', 'memberOf'])
             expect(resp.name).toBe('int_tests_yw-users_bis@test-user')
             done()
         })
@@ -110,8 +114,8 @@ test('pyYouwol.admin.environment.customDispatches', (done) => {
         .pipe(
             raiseHTTPErrors(),
             tap((resp) => {
-                Test.expectAttributes(resp, ['dispatches'])
-                Test.expectAttributes(resp.dispatches, ['BrotliDecompress'])
+                expectAttributes(resp, ['dispatches'])
+                expectAttributes(resp.dispatches, ['BrotliDecompress'])
                 expect(resp.dispatches.BrotliDecompress).toHaveLength(1)
             }),
         )

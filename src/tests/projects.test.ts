@@ -1,12 +1,11 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
 
-import { raiseHTTPErrors, Test } from '@youwol/http-clients'
-Test.mockRequest()
+import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 
 import { btoa } from 'buffer'
 import { combineLatest, Observable, of } from 'rxjs'
 import { filter, map, mergeMap, reduce, take, tap } from 'rxjs/operators'
-import { PyYouwolClient, PipelineStepStatusResponse, setup$ } from '../lib'
+import { PyYouwolClient } from '../lib'
 
 import {
     expectArtifacts$,
@@ -19,6 +18,8 @@ import {
     expectPublishLocal,
     uniqueProjectName,
 } from './utils'
+import { setup$ } from './local-youwol-test-setup'
+import { PipelineStepStatusResponse } from '../lib/routers/projects'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -77,7 +78,7 @@ test('pyYouwol.admin.projects.projectStatus', (done) => {
         pyYouwol.admin.projects.webSocket.projectStatus$({ projectId }),
     ]).subscribe(([respHttp, respWs]) => {
         expectProjectStatus(respHttp)
-        Test.expectAttributes(respWs.attributes, ['projectId'])
+        expectAttributes(respWs.attributes, ['projectId'])
         expect(respWs.data).toEqual(respHttp)
         done()
     })
@@ -96,7 +97,7 @@ test('pyYouwol.admin.projects.flowStatus', (done) => {
         .pipe(take(1))
         .subscribe(([respHttp, respWs]) => {
             expectFlowStatus(respHttp, projectName)
-            Test.expectAttributes(respWs.attributes, ['projectId', 'flowId'])
+            expectAttributes(respWs.attributes, ['projectId', 'flowId'])
             expect(respHttp).toEqual(respWs.data)
             done()
         })

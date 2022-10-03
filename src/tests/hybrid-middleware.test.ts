@@ -1,10 +1,8 @@
 // eslint-disable-next-line eslint-comments/disable-enable-pair -- to not have problem
 /* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
-import { Test } from '@youwol/http-clients'
-Test.mockRequest()
-
 import { remoteStoryAssetId } from './remote_assets_id'
-import { setup$ } from '../lib'
+import { getAsset, getPermissions, Shell, shell$ } from './shell'
+import { setup$ } from './local-youwol-test-setup'
 
 beforeEach((done) => {
     setup$({
@@ -21,30 +19,34 @@ test('can retrieve asset info when remote only', (done) => {
         public readonly assetId = remoteStoryAssetId
     }
 
-    Test.shell$<Context>(new Context())
+    shell$<Context>(new Context())
         .pipe(
-            Test.AssetsBackend.getAsset({
-                inputs: (shell: Test.Shell<Context>) => {
+            getAsset(
+                (shell: Shell<Context>) => {
                     return {
                         assetId: shell.context.assetId,
                     }
                 },
-                sideEffects: (response, shell) => {
-                    expect(response.assetId).toBe(shell.context.assetId)
+                {
+                    sideEffects: (response, shell) => {
+                        expect(response.assetId).toBe(shell.context.assetId)
+                    },
                 },
-            }),
-            Test.AssetsBackend.getPermissions({
-                inputs: (shell) => {
+            ),
+            getPermissions(
+                (shell) => {
                     return {
                         assetId: shell.context.assetId,
                     }
                 },
-                sideEffects: (response) => {
-                    expect(response.write).toBeTruthy()
-                    expect(response.read).toBeTruthy()
-                    expect(response.share).toBeTruthy()
+                {
+                    sideEffects: (response) => {
+                        expect(response.write).toBeTruthy()
+                        expect(response.read).toBeTruthy()
+                        expect(response.share).toBeTruthy()
+                    },
                 },
-            }),
+            ),
         )
         .subscribe(() => {
             done()

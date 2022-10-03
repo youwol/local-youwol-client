@@ -2,21 +2,34 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
 
 import {
-    Test,
     AssetsGateway,
     FluxBackend,
     StoriesBackend,
     FilesBackend,
 } from '@youwol/http-clients'
-Test.mockRequest()
 
-import { uploadAsset, switchToRemoteShell } from './shell'
+import {
+    uploadAsset,
+    switchToRemoteShell,
+    queryChildrenExplorer,
+    Shell,
+    getAsset,
+    trashItem,
+    purgeDrive,
+    newProjectFlux,
+    getProjectFlux,
+    newStory,
+    getStory,
+    upload,
+    getFileInfo,
+    shell$,
+    newShell,
+} from './shell'
 import { Observable } from 'rxjs'
 import path from 'path'
-import { readFileSync } from 'fs'
-import { setup$ } from '../lib'
+import { setup$ } from './local-youwol-test-setup'
 
-jest.setTimeout(10000 * 1000)
+jest.setTimeout(10 * 1000)
 beforeAll(async (done) => {
     setup$({
         localOnly: false,
@@ -34,7 +47,7 @@ function uploadTest<TContext extends UploadContext>({
     createOperator,
     getRawOperator,
 }) {
-    return (source$: Observable<Test.Shell<TContext>>) => {
+    return (source$: Observable<Shell<TContext>>) => {
         return source$.pipe(
             createOperator,
             uploadAsset<TContext>({
@@ -42,48 +55,54 @@ function uploadTest<TContext extends UploadContext>({
                     assetId: shell.context.asset.assetId,
                 }),
             }),
-            Test.ExplorerBackend.queryChildren<TContext>({
-                inputs: (shell) => ({
+            queryChildrenExplorer<TContext>(
+                (shell) => ({
                     parentId: shell.homeFolderId,
                 }),
-                sideEffects: (resp, shell) => {
-                    const found = resp.items.find(
-                        (item) => item.assetId == shell.context.asset.assetId,
-                    )
-                    expect(found).toBeTruthy()
-                    expect(found['origin'].remote).toBeTruthy()
-                    expect(found['origin'].local).toBeTruthy()
+                {
+                    sideEffects: (resp, shell) => {
+                        const found = resp.items.find(
+                            (item) =>
+                                item.assetId == shell.context.asset.assetId,
+                        )
+                        expect(found).toBeTruthy()
+                        expect(found['origin'].remote).toBeTruthy()
+                        expect(found['origin'].local).toBeTruthy()
+                    },
                 },
-            }),
+            ),
             switchToRemoteShell(),
-            Test.AssetsBackend.getAsset({
-                inputs: (shell: Test.Shell<UploadContext>) => {
-                    return {
-                        assetId: shell.context.asset.assetId,
-                    }
+            getAsset(
+                (shell: Shell<UploadContext>) => ({
+                    assetId: shell.context.asset.assetId,
+                }),
+                {
+                    sideEffects: (resp, shell) => {
+                        expect(resp.name).toBe(shell.context.asset.name)
+                    },
                 },
-                sideEffects: (resp, shell) => {
-                    expect(resp.name).toBe(shell.context.asset.name)
-                },
-            }),
+            ),
             getRawOperator,
-            Test.ExplorerBackend.trashItem({
-                inputs: (shell) => ({ itemId: shell.context.asset.itemId }),
-            }),
-            Test.ExplorerBackend.queryChildren<TContext>({
-                inputs: (shell) => ({
+            trashItem((shell: Shell<UploadContext>) => ({
+                itemId: shell.context.asset.itemId,
+            })),
+            queryChildrenExplorer<TContext>(
+                (shell) => ({
                     parentId: shell.homeFolderId,
                 }),
-                sideEffects: (resp, shell) => {
-                    const found = resp.items.find(
-                        (item) => item.assetId == shell.context.asset.assetId,
-                    )
-                    expect(found).toBeFalsy()
+                {
+                    sideEffects: (resp, shell) => {
+                        const found = resp.items.find(
+                            (item) =>
+                                item.assetId == shell.context.asset.assetId,
+                        )
+                        expect(found).toBeFalsy()
+                    },
                 },
-            }),
-            Test.ExplorerBackend.purgeDrive({
-                inputs: (shell) => ({ driveId: shell.defaultDriveId }),
-            }),
+            ),
+            purgeDrive((shell: Shell<TContext>) => ({
+                driveId: shell.defaultDriveId,
+            })),
         )
     }
 }
@@ -102,34 +121,35 @@ test('upload flux project', (done) => {
             Object.assign(this, params)
         }
     }
-    Test.shell$(new Context())
+    shell$(new Context())
         .pipe(
             uploadTest({
-                createOperator: Test.FluxBackend.newProject<Context>({
-                    inputs: (shell) => ({
+                createOperator: newProjectFlux<Context>(
+                    (shell) => ({
                         queryParameters: { folderId: shell.homeFolderId },
                         body: { name: shell.context.projectName },
                     }),
-                    newContext: (
-                        shell,
-                        resp: AssetsGateway.NewAssetResponse<FluxBackend.NewProjectResponse>,
-                    ) => {
-                        return new Context({
-                            ...shell.context,
-                            asset: resp,
-                        })
+                    {
+                        newShell: (
+                            shell,
+                            resp: AssetsGateway.NewAssetResponse<FluxBackend.NewProjectResponse>,
+                        ) =>
+                            newShell(shell, resp, (shell, resp) => ({
+                                ...shell.context,
+                                asset: resp,
+                            })),
                     },
-                }),
-                getRawOperator: Test.FluxBackend.getProject<Context>({
-                    inputs: (shell) => {
-                        return {
-                            projectId: shell.context.asset.rawId,
-                        }
+                ),
+                getRawOperator: getProjectFlux<Context>(
+                    (shell) => ({
+                        projectId: shell.context.asset.rawId,
+                    }),
+                    {
+                        sideEffects: (resp) => {
+                            expect(resp).toBeTruthy()
+                        },
                     },
-                    sideEffects: (resp) => {
-                        expect(resp).toBeTruthy()
-                    },
-                }),
+                ),
             }),
         )
         .subscribe(() => {
@@ -150,34 +170,34 @@ test('upload story', (done) => {
             Object.assign(this, params)
         }
     }
-    Test.shell$(new Context())
+    shell$(new Context())
         .pipe(
             uploadTest({
-                createOperator: Test.StoriesBackend.createStory<Context>({
-                    inputs: (shell) => ({
+                createOperator: newStory<Context>(
+                    (shell) => ({
                         queryParameters: { folderId: shell.homeFolderId },
                         body: { title: shell.context.storyName },
                     }),
-                    newContext: (
-                        shell,
-                        resp: AssetsGateway.NewAssetResponse<StoriesBackend.CreateStoryResponse>,
-                    ) => {
-                        return new Context({
-                            ...shell.context,
-                            asset: resp,
-                        })
+                    {
+                        newShell: (shell, resp) =>
+                            newShell(shell, resp, (shell, resp) => ({
+                                ...shell.context,
+                                asset: resp,
+                            })),
                     },
-                }),
-                getRawOperator: Test.StoriesBackend.getStory<Context>({
-                    inputs: (shell) => {
+                ),
+                getRawOperator: getStory<Context>(
+                    (shell) => {
                         return {
                             storyId: shell.context.asset.rawId,
                         }
                     },
-                    sideEffects: (resp) => {
-                        expect(resp).toBeTruthy()
+                    {
+                        sideEffects: (resp) => {
+                            expect(resp).toBeTruthy()
+                        },
                     },
-                }),
+                ),
             }),
         )
         .subscribe(() => {
@@ -201,10 +221,10 @@ test('upload data', (done) => {
         }
     }
 
-    Test.shell$(new Context())
+    shell$(new Context())
         .pipe(
             uploadTest<Context>({
-                createOperator: Test.FilesBackend.upload<Context>({
+                createOperator: upload<Context>({
                     inputs: (shell) => {
                         return {
                             body: {
@@ -226,18 +246,19 @@ test('upload data', (done) => {
                             asset: resp,
                         })
                     },
-                    fileReaderSync: readFileSync,
                 }),
-                getRawOperator: Test.FilesBackend.getInfo<Context>({
-                    inputs: (shell) => {
+                getRawOperator: getFileInfo<Context>(
+                    (shell) => {
                         return {
                             fileId: shell.context.asset.rawId,
                         }
                     },
-                    sideEffects: (resp) => {
-                        expect(resp).toBeTruthy()
+                    {
+                        sideEffects: (resp) => {
+                            expect(resp).toBeTruthy()
+                        },
                     },
-                }),
+                ),
             }),
         )
         .subscribe(() => {

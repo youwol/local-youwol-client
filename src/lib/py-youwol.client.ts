@@ -1,59 +1,22 @@
-import { combineLatest, Subject } from 'rxjs'
+import { combineLatest } from 'rxjs'
 import {
     RootRouter,
     CallerRequestOptions,
     HTTPResponse$,
     WebSocketResponse$,
-} from '@youwol/http-clients'
+    WebSocketClient,
+} from '@youwol/http-primitives'
 
 import { ContextMessage, HealthzResponse } from './interfaces'
 import { AdminRouter } from './routers/admin.router'
 import { take } from 'rxjs/operators'
-import { AuthorizationRouter } from './routers'
-
-export class WebSocket$<TMessage> {
-    public readonly message$: Subject<TMessage>
-    public ws: WebSocket
-
-    constructor(public readonly path: string) {
-        this.message$ = new Subject<TMessage>()
-    }
-
-    connectWs() {
-        if (this.ws) {
-            this.ws.close()
-        }
-        this.ws = new WebSocket(this.path)
-        this.ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data)
-                this.message$.next(data)
-            } catch (e) {
-                console.error('Can not parse data', { error: String(e), event })
-            }
-        }
-        this.ws.onerror = (err) => {
-            console.error(
-                'Socket encountered error: ',
-                String(err),
-                'Closing socket',
-            )
-            console.log('error', err)
-            this.ws.close()
-            console.log('Reconnect will be attempted in 1 second.')
-            setTimeout(() => {
-                this.connectWs()
-            }, 1000)
-        }
-        return this.message$
-    }
-}
+import { AuthorizationRouter } from './routers/authorization'
 
 export class WsRouter {
-    private readonly _log = new WebSocket$<ContextMessage>(
+    private readonly _log = new WebSocketClient<ContextMessage>(
         `ws://${window.location.host}/ws-logs`,
     )
-    private readonly _data = new WebSocket$<ContextMessage>(
+    private readonly _data = new WebSocketClient<ContextMessage>(
         `ws://${window.location.host}/ws-data`,
     )
     startWs$() {

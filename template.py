@@ -20,18 +20,18 @@ template = Template(
     dependencies=Dependencies(
         runTime=RunTimeDeps(
             externals={
-                "@youwol/http-clients": "^1.0.4",
+                "@youwol/http-primitives": "^0.1.1",
                 "rxjs": "^6.5.5"
             }
         ),
         devTime={
-            "@youwol/cdn-client": "^1.0.2",
-            "isomorphic-fetch": "^3.0.0",
+            "@youwol/cdn-client": "^1.0.4",
+            "@youwol/http-clients": "^2.0.1",
         }
     ),
     bundles=Bundles(
           mainModule=MainModule(
-              entryFile='lib/index.ts',
+              entryFile='./index.ts',
               loadDependencies=["@youwol/http-client", "rxjs"]
           )
         ),
