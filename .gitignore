@@ -7,3 +7,4 @@ cdn.zip
 __pycache__
 *.iml
 .template
+src/tests/yw_config/databases
