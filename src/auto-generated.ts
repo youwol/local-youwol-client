@@ -41,7 +41,7 @@ const exportedSymbols = {
 const mainEntry : Object = {
     "entryFile": "./index.ts",
     "loadDependencies": [
-        "@youwol/http-client",
+        "@youwol/http-primitives",
         "rxjs"
     ]
 }
@@ -90,7 +90,7 @@ export const setup = {
         const parameters = installParameters || {}
         const scripts = [
             ...(parameters.scripts || []),
-            `@youwol/local-youwol-client#0.1.2-wip~dist/@youwol/local-youwol-client/${entry.name}.js`
+            `@youwol/local-youwol-client#0.1.2~dist/@youwol/local-youwol-client/${entry.name}.js`
         ]
         const modules = [
             ...(parameters.modules || []),
