@@ -228,6 +228,9 @@ function test_download_asset(assetId: string, basePath: string) {
         }),
         mergeMap(() => pyYouwol.admin.system.webSocket.downloadEvent$()),
         takeWhile((event) => {
+            if (event.data.type == 'failed') {
+                throw Error('Failed to download asset')
+            }
             return event.data && event.data.type != 'succeeded'
         }, true),
         reduce((acc, e) => [...acc, e], []),
