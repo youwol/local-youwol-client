@@ -8,17 +8,16 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
-import youwol_files_backend as files_backend
-from youwol.configuration.config_from_module import IConfigurationFactory, Configuration
-from youwol.configuration.models_config import JwtSource
+from youwol.environment.config_from_module import IConfigurationFactory, Configuration
+from youwol.configuration.models_config import JwtSource, Projects
 from youwol.environment.clients import RemoteClients
 from youwol.environment.youwol_environment import YouwolEnvironment
 from youwol.middlewares.models_dispatch import AbstractDispatch
 from youwol.routers.custom_commands.models import Command
+from youwol.utils.utils_low_level import sed_inplace
 
-from youwol.utils.utils_low_level import execute_shell_cmd, sed_inplace
+from youwol_utils import execute_shell_cmd
 from youwol_utils import decode_id
-from youwol_utils.clients.file_system import LocalFileSystem
 from youwol_utils.context import Context
 from youwol.main_args import MainArguments
 from youwol_utils.request_info_factory import url_match
@@ -40,20 +39,21 @@ async def clone_project(git_url: str, new_project_name: str, ctx: Context):
     return {}
 
 
-async def purge_downloads(ctx: Context):
+async def purge_downloads(context: Context):
 
-    env = await ctx.get('env', YouwolEnvironment)
-    host = env.selectedRemote
-    assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
-    env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
-    default_drive = await env.get_default_drive(context=ctx)
-    resp = await assets_gtw.get_tree_folder_children(default_drive.downloadFolderId)
-    await asyncio.gather(
-        *[assets_gtw.delete_tree_item(item["treeId"]) for item in resp["items"]],
-        *[assets_gtw.delete_tree_folder(item["folderId"]) for item in resp["folders"]]
-    )
-    await assets_gtw.purge_drive(default_drive.driveId)
-    return {}
+    async with context.start(action="purge_downloads", muted_http_errors={404}) as ctx:  # type: Context
+        env = await ctx.get('env', YouwolEnvironment)
+        host = env.selectedRemote
+        assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
+        default_drive = await env.get_default_drive(context=ctx)
+        resp = await assets_gtw.get_tree_folder_children(default_drive.downloadFolderId)
+        await asyncio.gather(
+            *[assets_gtw.delete_tree_item(item["treeId"]) for item in resp["items"]],
+            *[assets_gtw.delete_tree_folder(item["folderId"]) for item in resp["folders"]]
+        )
+        await assets_gtw.purge_drive(default_drive.driveId)
+        return {}
 
 
 async def reset(ctx: Context):
@@ -139,18 +139,10 @@ class BrotliDecompress(AbstractDispatch):
         return "Decompress brotli on te fly because in jest brotli is not supported"
 
 
-async def get_files_backend_config(ctx: Context):
-    env = await ctx.get('env', YouwolEnvironment)
-    root_path = env.pathsBook.local_storage / files_backend.Constants.namespace / 'youwol-users'
-    config = files_backend.Configuration(
-        file_system=LocalFileSystem(root_path=root_path)
-    )
-    return files_backend.get_router(config)
-
-
 class ConfigurationFactory(IConfigurationFactory):
 
     async def get(self, main_args: MainArguments) -> Configuration:
+
         return Configuration(
             openIdHost="platform.youwol.com",
             platformHost="platform.youwol.com",
@@ -158,7 +150,9 @@ class ConfigurationFactory(IConfigurationFactory):
             httpPort=2001,
             dataDir=Path(__file__).parent / 'databases',
             cacheDir=Path(__file__).parent / 'youwol_system',
-            projectsDirs=[Path(__file__).parent / 'projects'],
+            projects=Projects(
+                finder=Path(__file__).parent
+            ),
             dispatches=[
                 BrotliDecompress()
             ],
