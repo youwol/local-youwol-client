@@ -67,8 +67,8 @@ export interface ProjectTemplate {
     parameters: { [k: string]: string }
 }
 
-export interface PipelinesSourceInfo {
-    projectTemplates: ProjectTemplate[]
+export interface Projects {
+    templates?: ProjectTemplate[]
 }
 
 export interface YouwolEnvironment {
@@ -84,8 +84,8 @@ export interface YouwolEnvironment {
 
     pathsBook: PathsBook
 
-    pipelinesSourceInfo?: PipelinesSourceInfo
-    projectTemplates: ProjectTemplate[]
+    projects?: Projects
+
     customDispatches: CustomDispatch[]
     cache: { [key: string]: unknown }
 
