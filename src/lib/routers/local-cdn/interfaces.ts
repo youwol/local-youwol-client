@@ -34,11 +34,11 @@ export interface CdnPackageLight {
 export interface CdnStatusResponse {
     packages: CdnPackageLight[]
 }
-export interface GetCdnStatusResponse extends CdnStatusResponse {}
+export type GetCdnStatusResponse = CdnStatusResponse
 
-export interface GetPackageResponse extends CdnPackage {}
+export type GetPackageResponse = CdnPackage
 
-export interface CdnPackageResponse extends CdnPackage {}
+export type CdnPackageResponse = CdnPackage
 
 export interface CheckUpdateResponse {
     status: UpdateStatus
@@ -51,7 +51,7 @@ export interface CheckUpdatesResponse {
     updates: CheckUpdateResponse[]
 }
 
-export interface TriggerCollectUpdatesResponse extends CheckUpdatesResponse {}
+export type TriggerCollectUpdatesResponse = CheckUpdatesResponse
 
 export interface DownloadPackageBody {
     packageName: string
@@ -93,4 +93,4 @@ export interface PackageEvent {
         | 'updateCheckDone'
 }
 
-export interface PackageEventResponse extends PackageEvent {}
+export type PackageEventResponse = PackageEvent
