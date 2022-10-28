@@ -1096,10 +1096,10 @@
   dependencies:
     semver "^7.3.4"
 
-"@youwol/eslint-config@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@youwol/eslint-config/-/eslint-config-0.0.1.tgz#afc2586b8255a1fa56d17d181c42e1d28a8f8598"
-  integrity sha512-x2TawReI63KtrgYWO4CCJOgA3JBexrlWyINmVF19bFGU6PaVzYQgY7K0c6nAPiGLLfPqR9QbhzdaOl9LMtnD0g==
+"@youwol/eslint-config@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@youwol/eslint-config/-/eslint-config-0.0.2.tgz#7f09617f60ba61e71fb43e964f0bf5db8c107807"
+  integrity sha512-4K/euIHPo2qATnO7WrAEuE7Y+9xgnzXRFI8fclS0qyTN7nH5Th+cC1kOMt2VFwNHCiHt3YkGjFncFHbcju7l7A==
 
 "@youwol/http-clients@^2.0.1":
   version "2.0.1"
@@ -1116,10 +1116,10 @@
   dependencies:
     rxjs "^6.5.5"
 
-"@youwol/prettier-config@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@youwol/prettier-config/-/prettier-config-0.0.1.tgz#482b12d0d75d9cbf9ff7ec09ace826803e1d2206"
-  integrity sha512-IpsvlkHHfGLgmxvGMeiMaAQS2Z5mwJ0QkHYOjjos3h8DAt1woYCwh3ZW+QQOz6ReiQdEWSVCimk/buq3jDrdVw==
+"@youwol/prettier-config@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@youwol/prettier-config/-/prettier-config-0.0.2.tgz#4b7badc7e234193d38383940011df4246960960e"
+  integrity sha512-6SWLHnoom4Zv9Vu79ztjfnsU69RLcnzrhXFBDvC/KEnrbkqfjRqVeAooVUqote1pMckN9DFaTOt2+CtCXvCxnQ==
 
 abab@^2.0.6:
   version "2.0.6"
