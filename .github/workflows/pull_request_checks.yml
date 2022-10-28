@@ -1,0 +1,29 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  integration_py-youwol:
+    name: Integration with py-youwol
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare repository
+        id: prepare
+        uses: youwol/nestor/ts/prepare@v1
+
+      - name: Run Tests with coverage
+        id: tests_coverage
+        uses: youwol/nestor/ts/tests_coverage@v1
+        with:
+          py-youwol_conf_path: src/tests/yw_config/yw_config.py
+          py-youwol_ref: bug/tmp_zips_in_tmp
+
+      - name: On Tests Failure
+        id: on_tests_failure
+        if: steps.tests_coverage.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because tests has failed, see job logs and annotations.")

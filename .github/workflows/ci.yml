@@ -1,0 +1,53 @@
+name: Continuous Integration
+
+on: push
+
+jobs:
+  static_analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare repository
+        id: prepare
+        uses: youwol/nestor/ts/prepare@v1
+
+      - name: Static Analysis
+        id: static_analysis
+        uses: youwol/nestor/ts/static_analysis@v1
+
+      - name: On Static Analysis Failure
+        id: static_analysis_failure
+        if: steps.static_analysis.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because static analysis has failed, see job logs and annotations.")
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare repository
+        id: prepare
+        uses: youwol/nestor/ts/prepare@v1
+
+      - name: Prepare py-youwol repository
+        id: prepare_py-youwol
+        uses: youwol/nestor/py/prepare@v1
+        with:
+          repository: youwol/py-youwol
+          ref: main
+          path: ${{ runner.temp }}/py-youwol
+
+      - name: Build
+        id: build
+        env:
+          PYTHONPATH: ${{ runner.temp }}/py-youwol
+        run: yarn build || echo "result=failure" >> $GITHUB_OUTPUT
+        shell: sh
+
+      - name: On Build Failure
+        id: build_failure
+        if: steps.build.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because build failed, see job logs and annotations.")
