@@ -1,7 +1,5 @@
 # @youwol/local-youwol-client
 
-
-
 This library is part of the hybrid cloud/local ecosystem
 [YouWol](https://platform.youwol.com/applications/@youwol/platform/latest).
 
@@ -38,6 +36,7 @@ yarn build:prod
 ```
 
 ---
+
 Tests require [py-youwol](https://l.youwol.com/doc/py-youwol) to run on port 2001 using the configuration defined [here](https://github.com/youwol/local-youwol-client/blob/main/src/tests/yw_config).
 To run tests:
 
