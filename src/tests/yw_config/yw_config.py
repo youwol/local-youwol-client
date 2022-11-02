@@ -47,12 +47,17 @@ async def purge_downloads(context: Context):
         assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
         env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
         default_drive = await env.get_default_drive(context=ctx)
-        resp = await assets_gtw.get_tree_folder_children(default_drive.downloadFolderId)
-        await asyncio.gather(
-            *[assets_gtw.delete_tree_item(item["treeId"]) for item in resp["items"]],
-            *[assets_gtw.delete_tree_folder(item["folderId"]) for item in resp["folders"]]
+        treedb_client = assets_gtw.get_treedb_backend_router()
+        headers = ctx.headers()
+        resp = await treedb_client.get_children(
+            folder_id=default_drive.downloadFolderId,
+            headers=headers
         )
-        await assets_gtw.purge_drive(default_drive.driveId)
+        await asyncio.gather(
+            *[treedb_client.remove_item(item_id=item["treeId"], headers=headers) for item in resp["items"]],
+            *[treedb_client.remove_folder(folder_id=item["folderId"], headers=headers) for item in resp["folders"]]
+        )
+        await treedb_client.purge_drive(drive_id=default_drive.driveId, headers=headers)
         return {}
 
 
