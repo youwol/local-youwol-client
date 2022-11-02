@@ -27,12 +27,16 @@ from youwol_utils.utils_paths import parse_json
 async def clone_project(git_url: str, new_project_name: str, ctx: Context):
 
     folder_name = new_project_name.split("/")[-1]
+    git_folder_name = git_url.split('/')[-1].split('.')[0]
     env = await ctx.get('env', YouwolEnvironment)
     parent_folder = env.pathsBook.config.parent / 'projects'
     dst_folder = parent_folder / folder_name
     await execute_shell_cmd(cmd=f"(cd {parent_folder} && git clone {git_url})",
                             context=ctx)
-    os.rename(parent_folder / git_url.split('/')[-1].split('.')[0], parent_folder / folder_name)
+    if not (parent_folder / git_folder_name).exists():
+        raise RuntimeError("Git repo not properly cloned")
+
+    os.rename(parent_folder / git_folder_name, parent_folder / folder_name)
     old_project_name = parse_json(dst_folder / 'package.json')['name']
     sed_inplace(dst_folder / 'package.json', old_project_name, new_project_name)
     sed_inplace(dst_folder / 'index.html', old_project_name, new_project_name)
