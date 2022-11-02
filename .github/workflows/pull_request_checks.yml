@@ -18,8 +18,8 @@ jobs:
         id: tests_coverage
         uses: youwol/nestor/ts/tests_coverage@v1
         with:
-          py-youwol_conf_path: src/tests/yw_config/yw_config.py
-          py-youwol_ref: bug/tmp_zips_in_tmp
+          py-youwol_conf_path: ${{ github.workspace }}/src/tests/yw_config/yw_config.py
+          py-youwol_ref: feature/remove-deprecated-end-points
 
       - name: On Tests Failure
         id: on_tests_failure
