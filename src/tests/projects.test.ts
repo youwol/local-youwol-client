@@ -23,6 +23,30 @@ import { PipelineStepStatusResponse } from '../lib/routers/projects'
 
 const pyYouwol = new PyYouwolClient()
 
+/**
+ *
+ * ⚠️ Warning ⚠️ 'heisenbug'
+ *
+ * Having a large timeout seems to help having consistent success,
+ * not related to the tests themselves but to the beforeAll code (most likely related to git checkout).
+ * When beforeAll takes too much time, the tests actually runs before its end,
+ * and fails. Eventually, 'beforeAll' finish after the tests failed.
+ * The 'beforeAllDone' enables ensuring that 'beforeAll' effectively ran before trying to test anything.
+ *
+ */
+let beforeAllDone = false
+
+function assertBeforeAllFinished() {
+    if (!beforeAllDone) {
+        console.error(
+            "projects.test.ts => Test started before 'beforeAll' finished",
+        )
+        throw Error(
+            "projects.test.ts => Test started before 'beforeAll' finished",
+        )
+    }
+}
+
 let projectName: string
 
 beforeAll(async (done) => {
@@ -48,12 +72,14 @@ beforeAll(async (done) => {
             }),
         )
         .subscribe(() => {
+            beforeAllDone = true
             done()
         })
 })
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
 test('pyYouwol.admin.projects.status', (done) => {
+    assertBeforeAllFinished()
     combineLatest([
         pyYouwol.admin.projects.status$().pipe(raiseHTTPErrors()),
         pyYouwol.admin.projects.webSocket.status$(),
@@ -69,6 +95,7 @@ test('pyYouwol.admin.projects.status', (done) => {
 })
 
 test('pyYouwol.admin.projects.projectStatus', (done) => {
+    assertBeforeAllFinished()
     const projectId = btoa(projectName)
 
     combineLatest([
@@ -85,6 +112,7 @@ test('pyYouwol.admin.projects.projectStatus', (done) => {
 })
 
 test('pyYouwol.admin.projects.flowStatus', (done) => {
+    assertBeforeAllFinished()
     combineLatest([
         pyYouwol.admin.projects
             .getPipelineStatus$({
@@ -118,6 +146,7 @@ function run$(stepId: string): Observable<PipelineStepStatusResponse> {
 }
 
 test('pyYouwol.admin.projects.runStep', (done) => {
+    assertBeforeAllFinished()
     const projectId = btoa(projectName)
     const steps$ = expectPipelineStepEvents$(pyYouwol)
 
@@ -149,7 +178,6 @@ test('pyYouwol.admin.projects.runStep', (done) => {
         expect(artifacts).toBeTruthy()
         expect(steps).toBeTruthy()
         done()
-        /* no op */
     })
 })
 /* eslint-enable jest/no-done-callback -- re-enable */
