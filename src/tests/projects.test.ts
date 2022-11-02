@@ -34,6 +34,8 @@ const pyYouwol = new PyYouwolClient()
  * The 'beforeAllDone' enables ensuring that 'beforeAll' effectively ran before trying to test anything.
  *
  */
+jest.setTimeout(20 * 1000)
+
 let beforeAllDone = false
 
 function assertBeforeAllFinished() {
