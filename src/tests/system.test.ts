@@ -3,6 +3,7 @@ import { mergeMap, tap } from 'rxjs/operators'
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
+import path from 'path'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -86,22 +87,37 @@ test('pyYouwol.admin.system.clearLogs', (done) => {
 })
 
 test('pyYouwol.admin.system.queryFolderContent', (done) => {
-    pyYouwol.admin.system
-        .queryFolderContent$({ path: './' })
-        .pipe(raiseHTTPErrors())
+    pyYouwol.admin.environment
+        .getStatus$()
+        .pipe(
+            raiseHTTPErrors(),
+            mergeMap((status) => {
+                return pyYouwol.admin.system.queryFolderContent$({
+                    path: path.dirname(status.configuration.pathsBook.config),
+                })
+            }),
+            raiseHTTPErrors(),
+        )
         .subscribe((resp) => {
-            // the folder is py-youwol/youwol
             expectAttributes(resp, ['files', 'folders'])
-            expect(resp.files.find((f) => f == 'main.py')).toBeTruthy()
-            expect(resp.folders.find((f) => f == 'routers')).toBeTruthy()
+            expect(resp.files.find((f) => f == 'yw_config.py')).toBeTruthy()
+            expect(resp.folders.find((f) => f == 'databases')).toBeTruthy()
             done()
         })
 })
 
 test('pyYouwol.admin.system.getFileContent', (done) => {
-    pyYouwol.admin.system
-        .getFileContent$({ path: './main.py' })
-        .pipe(raiseHTTPErrors())
+    pyYouwol.admin.environment
+        .getStatus$()
+        .pipe(
+            raiseHTTPErrors(),
+            mergeMap((status) => {
+                return pyYouwol.admin.system.getFileContent$({
+                    path: status.configuration.pathsBook.config,
+                })
+            }),
+            raiseHTTPErrors(),
+        )
         .subscribe((resp) => {
             expect(resp).toBeTruthy()
             done()
