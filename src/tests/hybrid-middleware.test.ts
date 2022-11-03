@@ -4,6 +4,8 @@ import { remoteStoryAssetId } from './remote_assets_id'
 import { getAsset, getPermissions, Shell, shell$ } from './shell'
 import { setup$ } from './local-youwol-test-setup'
 
+jest.setTimeout(20 * 1000)
+
 beforeEach((done) => {
     setup$({
         localOnly: false,

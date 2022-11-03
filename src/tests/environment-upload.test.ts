@@ -29,7 +29,7 @@ import { Observable } from 'rxjs'
 import path from 'path'
 import { setup$ } from './local-youwol-test-setup'
 
-jest.setTimeout(10 * 1000)
+jest.setTimeout(20 * 1000)
 beforeAll(async (done) => {
     setup$({
         localOnly: false,

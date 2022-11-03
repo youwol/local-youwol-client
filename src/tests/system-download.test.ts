@@ -31,8 +31,7 @@ import {
 
 const pyYouwol = new PyYouwolClient()
 
-// 10 seconds is enough when running cdn-backend locally, but not enough if ran using minio client
-jest.setTimeout(15 * 1000)
+jest.setTimeout(20 * 1000)
 
 beforeEach(async (done) => {
     setup$({

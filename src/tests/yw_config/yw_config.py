@@ -27,12 +27,16 @@ from youwol_utils.utils_paths import parse_json
 async def clone_project(git_url: str, new_project_name: str, ctx: Context):
 
     folder_name = new_project_name.split("/")[-1]
+    git_folder_name = git_url.split('/')[-1].split('.')[0]
     env = await ctx.get('env', YouwolEnvironment)
     parent_folder = env.pathsBook.config.parent / 'projects'
     dst_folder = parent_folder / folder_name
     await execute_shell_cmd(cmd=f"(cd {parent_folder} && git clone {git_url})",
                             context=ctx)
-    os.rename(parent_folder / git_url.split('/')[-1].split('.')[0], parent_folder / folder_name)
+    if not (parent_folder / git_folder_name).exists():
+        raise RuntimeError("Git repo not properly cloned")
+
+    os.rename(parent_folder / git_folder_name, parent_folder / folder_name)
     old_project_name = parse_json(dst_folder / 'package.json')['name']
     sed_inplace(dst_folder / 'package.json', old_project_name, new_project_name)
     sed_inplace(dst_folder / 'index.html', old_project_name, new_project_name)
@@ -47,12 +51,17 @@ async def purge_downloads(context: Context):
         assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
         env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
         default_drive = await env.get_default_drive(context=ctx)
-        resp = await assets_gtw.get_tree_folder_children(default_drive.downloadFolderId)
-        await asyncio.gather(
-            *[assets_gtw.delete_tree_item(item["treeId"]) for item in resp["items"]],
-            *[assets_gtw.delete_tree_folder(item["folderId"]) for item in resp["folders"]]
+        treedb_client = assets_gtw.get_treedb_backend_router()
+        headers = ctx.headers()
+        resp = await treedb_client.get_children(
+            folder_id=default_drive.downloadFolderId,
+            headers=headers
         )
-        await assets_gtw.purge_drive(default_drive.driveId)
+        await asyncio.gather(
+            *[treedb_client.remove_item(item_id=item["treeId"], headers=headers) for item in resp["items"]],
+            *[treedb_client.remove_folder(folder_id=item["folderId"], headers=headers) for item in resp["folders"]]
+        )
+        await treedb_client.purge_drive(drive_id=default_drive.driveId, headers=headers)
         return {}
 
 
