@@ -2,6 +2,12 @@ name: Pull Request Checks
 
 on:
   workflow_dispatch:
+    inputs:
+      py-youwol_ref:
+        description: >
+          branch, tag or SHA for py-youwol checkout.
+          Default to empty, i.e. py-youwol default branch
+        default: ''
 
   pull_request:
     branches:
@@ -21,7 +27,7 @@ jobs:
         uses: youwol/nestor/ts/tests_coverage@v1
         with:
           py-youwol_conf_path: ${{ github.workspace }}/src/tests/yw_config/yw_config.py
-          py-youwol_ref: feature/remove-deprecated-end-points
+          py-youwol_ref: ${{ inputs.py-youwol_ref }}
 
       - name: On Tests Failure
         id: on_tests_failure
