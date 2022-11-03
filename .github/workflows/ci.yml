@@ -1,6 +1,6 @@
 name: Continuous Integration
 
-on: push
+on: [push, workflow_dispatch]
 
 jobs:
   static_analysis:
