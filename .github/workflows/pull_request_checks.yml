@@ -28,6 +28,7 @@ jobs:
         with:
           py-youwol_conf_path: ${{ github.workspace }}/src/tests/yw_config/yw_config.py
           py-youwol_ref: ${{ inputs.py-youwol_ref }}
+          coverage_omit: '*/src/tests/*/yw_pipeline.py'
 
       - name: On Tests Failure
         id: on_tests_failure
