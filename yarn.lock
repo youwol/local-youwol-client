@@ -1121,6 +1121,11 @@
   resolved "https://registry.yarnpkg.com/@youwol/prettier-config/-/prettier-config-0.0.2.tgz#4b7badc7e234193d38383940011df4246960960e"
   integrity sha512-6SWLHnoom4Zv9Vu79ztjfnsU69RLcnzrhXFBDvC/KEnrbkqfjRqVeAooVUqote1pMckN9DFaTOt2+CtCXvCxnQ==
 
+"@youwol/tsconfig@^0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@youwol/tsconfig/-/tsconfig-0.0.1.tgz#95bdf910de84278bfec6124f53ffc49f9de9b18c"
+  integrity sha512-GD4Qbd9cC6jtlQkqzefrEa2rZG7ZH9tmgeRe11eXDPRvJx8tVuWTVd/5iBhPiUE0fXinb3jQIjiJh7xsAmXNRA==
+
 abab@^2.0.6:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/abab/-/abab-2.0.6.tgz#41b80f2c871d19686216b82309231cfd3cb3d291"

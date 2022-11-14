@@ -1,5 +1,7 @@
 # @youwol/local-youwol-client
 
+Client for local py-youwol
+
 This library is part of the hybrid cloud/local ecosystem
 [YouWol](https://platform.youwol.com/applications/@youwol/platform/latest).
 

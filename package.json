@@ -1,6 +1,6 @@
 {
     "name": "@youwol/local-youwol-client",
-    "description": "",
+    "description": "Client for local py-youwol",
     "version": "0.1.2-wip",
     "author": "greinisch@youwol.com",
     "homepage": "https://github.com/youwol/local-youwol-client#README.md",
@@ -44,6 +44,7 @@
         "del-cli": "^5.0.0",
         "@youwol/prettier-config": "^0.0.2",
         "@youwol/eslint-config": "^0.0.2",
+        "@youwol/tsconfig": "^0.0.1",
         "prettier": "^2.7.1",
         "prettier-plugin-properties": "^0.2.0",
         "@typescript-eslint/eslint-plugin": "^5.33.1",
