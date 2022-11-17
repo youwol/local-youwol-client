@@ -86,7 +86,6 @@ export function expectEnvironment(resp) {
         'remotesInfo',
     ])
     expectAttributes(resp.configuration, [
-        'availableProfiles',
         'httpPort',
         'openidHost',
         'commands',
