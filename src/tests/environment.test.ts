@@ -1,15 +1,11 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
 
-import {
-    onHTTPErrors,
-    raiseHTTPErrors,
-    expectAttributes,
-} from '@youwol/http-primitives'
+import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
 import { combineLatest } from 'rxjs'
 import { mergeMap, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
-import { expectEnvironment } from './utils'
 import { setup$ } from './local-youwol-test-setup'
+import { expectEnvironment } from './utils'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -53,33 +49,6 @@ test('pyYouwol.admin.environment.status', (done) => {
             }),
         )
         .subscribe(() => {
-            done()
-        })
-})
-
-test('pyYouwol.admin.environment.switchProfile', (done) => {
-    combineLatest([
-        pyYouwol.admin.environment
-            .switchProfile$({ body: { active: 'default' } })
-            .pipe(
-                onHTTPErrors(() => ({})),
-                mergeMap(() =>
-                    pyYouwol.admin.environment.switchProfile$({
-                        body: {
-                            active: 'profile-1',
-                        },
-                    }),
-                ),
-                raiseHTTPErrors(),
-            ),
-        pyYouwol.admin.environment.webSocket.status$({ profile: 'profile-1' }),
-    ])
-        .pipe(take(1))
-        .subscribe(([respHttp, respWs]) => {
-            expect(respHttp.configuration.activeProfile).toBe('profile-1')
-            expect(respWs.data.configuration.activeProfile).toBe('profile-1')
-            expectEnvironment(respHttp)
-            expectEnvironment(respWs.data)
             done()
         })
 })

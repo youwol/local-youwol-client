@@ -3,29 +3,27 @@ import json
 import os
 import shutil
 from pathlib import Path
+
 import brotli
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-
-from youwol.environment.config_from_module import IConfigurationFactory, Configuration
 from youwol.configuration.models_config import JwtSource, Projects
 from youwol.environment.clients import RemoteClients
+from youwol.environment.config_from_module import IConfigurationFactory, Configuration
 from youwol.environment.youwol_environment import YouwolEnvironment
+from youwol.main_args import MainArguments
 from youwol.middlewares.models_dispatch import AbstractDispatch
 from youwol.routers.custom_commands.models import Command
 from youwol.utils.utils_low_level import sed_inplace
-
-from youwol_utils import execute_shell_cmd
 from youwol_utils import decode_id
+from youwol_utils import execute_shell_cmd
 from youwol_utils.context import Context
-from youwol.main_args import MainArguments
 from youwol_utils.request_info_factory import url_match
 from youwol_utils.utils_paths import parse_json
 
 
 async def clone_project(git_url: str, new_project_name: str, ctx: Context):
-
     folder_name = new_project_name.split("/")[-1]
     git_folder_name = git_url.split('/')[-1].split('.')[0]
     env = await ctx.get('env', YouwolEnvironment)
@@ -44,7 +42,6 @@ async def clone_project(git_url: str, new_project_name: str, ctx: Context):
 
 
 async def purge_downloads(context: Context):
-
     async with context.start(action="purge_downloads", muted_http_errors={404}) as ctx:  # type: Context
         env = await ctx.get('env', YouwolEnvironment)
         host = env.selectedRemote
@@ -78,7 +75,6 @@ async def reset(ctx: Context):
 
 
 async def create_test_data_remote(context: Context):
-
     async with context.start("create_new_story_remote") as ctx:
         env = await context.get('env', YouwolEnvironment)
         host = env.selectedRemote
@@ -151,7 +147,6 @@ class BrotliDecompress(AbstractDispatch):
 class ConfigurationFactory(IConfigurationFactory):
 
     async def get(self, main_args: MainArguments) -> Configuration:
-
         return Configuration(
             openIdHost="platform.youwol.com",
             platformHost="platform.youwol.com",
@@ -195,13 +190,9 @@ class ConfigurationFactory(IConfigurationFactory):
                     do_delete=lambda ctx: {"status": "deleted"}
                 ),
             ],
-        ).extending_profile(
-            name='profile-1',
-            conf=Configuration()
         )
 
 
 async def test_command_post(body, context: Context):
-
     await context.info(text="test message", data={"body": body})
     return body["returnObject"]
