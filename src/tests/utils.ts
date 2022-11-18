@@ -1,6 +1,6 @@
+import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
 import { combineLatest } from 'rxjs'
 import { map, reduce, take, tap } from 'rxjs/operators'
-import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
 
 export function uniqueProjectName(prefix: string) {
@@ -87,7 +87,6 @@ export function expectEnvironment(resp) {
     ])
     expectAttributes(resp.configuration, [
         'httpPort',
-        'openidHost',
         'commands',
         'userEmail',
         'selectedRemote',
