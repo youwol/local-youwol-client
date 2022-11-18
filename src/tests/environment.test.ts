@@ -1,14 +1,11 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
 
-import {
-    raiseHTTPErrors,
-    expectAttributes,
-} from '@youwol/http-primitives'
+import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
 import { combineLatest } from 'rxjs'
 import { mergeMap, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
-import { expectEnvironment } from './utils'
 import { setup$ } from './local-youwol-test-setup'
+import { expectEnvironment } from './utils'
 
 const pyYouwol = new PyYouwolClient()
 
