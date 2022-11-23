@@ -29,6 +29,10 @@ jobs:
           py-youwol_conf_path: ${{ github.workspace }}/src/tests/yw_config/yw_config.py
           py-youwol_ref: ${{ inputs.py-youwol_ref }}
           coverage_omit: '*/src/tests/*/yw_pipeline.py'
+          USERNAME_INTEGRATION_TESTS: ${{ secrets.USERNAME_INTEGRATION_TESTS }}
+          PASSWORD_INTEGRATION_TESTS: ${{ secrets.PASSWORD_INTEGRATION_TESTS }}
+          USERNAME_INTEGRATION_TESTS_BIS: ${{ secrets.USERNAME_INTEGRATION_TESTS_BIS }}
+          PASSWORD_INTEGRATION_TESTS_BIS: ${{ secrets.PASSWORD_INTEGRATION_TESTS_BIS }}
 
       - name: On Tests Failure
         id: on_tests_failure

@@ -88,7 +88,7 @@ export function expectEnvironment(resp) {
     expectAttributes(resp.configuration, [
         'httpPort',
         'commands',
-        'userEmail',
+        'selectedUser',
         'selectedRemote',
         'pathsBook',
     ])
