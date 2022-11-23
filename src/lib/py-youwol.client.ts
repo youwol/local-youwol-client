@@ -1,16 +1,15 @@
-import { combineLatest } from 'rxjs'
 import {
-    RootRouter,
     CallerRequestOptions,
     HTTPResponse$,
-    WebSocketResponse$,
+    RootRouter,
     WebSocketClient,
+    WebSocketResponse$,
 } from '@youwol/http-primitives'
+import { combineLatest } from 'rxjs'
+import { take } from 'rxjs/operators'
 
 import { ContextMessage, HealthzResponse } from './interfaces'
 import { AdminRouter } from './routers/admin.router'
-import { take } from 'rxjs/operators'
-import { AuthorizationRouter } from './routers/authorization'
 
 export class WsRouter {
     private readonly _log = new WebSocketClient<ContextMessage>(
@@ -36,7 +35,6 @@ export class WsRouter {
 
 export class PyYouwolClient extends RootRouter {
     public readonly admin: AdminRouter
-    public readonly authorization: AuthorizationRouter
 
     static ws = new WsRouter()
 
@@ -50,7 +48,6 @@ export class PyYouwolClient extends RootRouter {
             headers,
         })
         this.admin = new AdminRouter(this, PyYouwolClient.ws)
-        this.authorization = new AuthorizationRouter(this)
     }
 
     /**

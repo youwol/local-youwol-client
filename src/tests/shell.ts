@@ -1,5 +1,11 @@
-import { Observable } from 'rxjs'
-import { map, mergeMap } from 'rxjs/operators'
+import {
+    AssetsBackend,
+    AssetsGateway,
+    ExplorerBackend,
+    FilesBackend,
+    FluxBackend,
+    StoriesBackend,
+} from '@youwol/http-clients'
 import {
     expectAttributes,
     HTTPError,
@@ -9,17 +15,11 @@ import {
     ShellWrapperOptions,
     wrap,
 } from '@youwol/http-primitives'
-import {
-    AssetsBackend,
-    AssetsGateway,
-    FilesBackend,
-    ExplorerBackend,
-    FluxBackend,
-    StoriesBackend,
-} from '@youwol/http-clients'
+import { readFileSync } from 'fs'
+import { Observable } from 'rxjs'
+import { map } from 'rxjs/operators'
 
 import { PyYouwolClient } from '../lib'
-import { readFileSync } from 'fs'
 import { UploadAssetResponse } from '../lib/routers/environment'
 
 export class Shell<T> extends ShellBase<T> {
@@ -83,26 +83,13 @@ export function uploadAsset<TContext>({
 export function switchToRemoteShell<TContext>() {
     return (source$: Observable<Shell<TContext>>) => {
         return source$.pipe(
-            mergeMap((shell) => {
-                return new PyYouwolClient().authorization
-                    .getAccessToken$()
-                    .pipe(
-                        raiseHTTPErrors(),
-                        map(({ accessToken }) => {
-                            return new Shell({
-                                ...shell,
-                                assetsGtw:
-                                    new AssetsGateway.AssetsGatewayClient({
-                                        hostName:
-                                            'http://localhost:2001/admin/remote', // Should be dynamic, from py-youwol env
-                                        headers: {
-                                            authorization: `Bearer ${accessToken}`,
-                                        },
-                                    }),
-                                context: { ...shell.context, accessToken },
-                            })
-                        }),
-                    )
+            map((shell) => {
+                return new Shell({
+                    ...shell,
+                    assetsGtw: new AssetsGateway.AssetsGatewayClient({
+                        hostName: 'http://localhost:2001/admin/remote', // Should be dynamic, from py-youwol env
+                    }),
+                })
             }),
         )
     }
