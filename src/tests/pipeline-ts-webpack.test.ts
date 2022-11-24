@@ -3,7 +3,7 @@
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 
 import { combineLatest } from 'rxjs'
-import { mergeMap, skipWhile, take, tap } from 'rxjs/operators'
+import { skipWhile, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 
 import { setup$ } from './local-youwol-test-setup'
@@ -24,33 +24,24 @@ beforeEach(async (done) => {
 })
 
 function testProjectCreationBase(body: CreateProjectFromTemplateBody) {
-    return setup$({
-        localOnly: true,
-        email: 'int_tests_yw-users@test-user',
-    }).pipe(
-        mergeMap(() => {
-            const projectStatusWs$ = pyYouwol.admin.projects.webSocket
-                .status$()
-                .pipe(
-                    skipWhile((respWs) => {
-                        return (
-                            respWs.data.results.find(
-                                (p: CreateProjectFromTemplateResponse) =>
-                                    p.name == body.parameters['name'],
-                            ) == undefined
-                        )
-                    }),
-                    take(1),
-                )
-            const createProject = pyYouwol.admin.projects
-                .createProjectFromTemplate$({
-                    body,
-                })
-                .pipe(raiseHTTPErrors())
-
-            return combineLatest([projectStatusWs$, createProject])
+    const projectStatusWs$ = pyYouwol.admin.projects.webSocket.status$().pipe(
+        skipWhile((respWs) => {
+            return (
+                respWs.data.results.find(
+                    (p: CreateProjectFromTemplateResponse) =>
+                        p.name == body.parameters['name'],
+                ) == undefined
+            )
         }),
-        raiseHTTPErrors(),
+        take(1),
+    )
+    const createProject = pyYouwol.admin.projects
+        .createProjectFromTemplate$({
+            body,
+        })
+        .pipe(raiseHTTPErrors())
+
+    return combineLatest([projectStatusWs$, createProject]).pipe(
         tap(([respWs, respHttp]) => {
             expectAttributes(respHttp, [
                 'pipeline',
