@@ -15,6 +15,7 @@ from youwol.environment.config_from_module import IConfigurationFactory, Configu
 from youwol.environment.youwol_environment import YouwolEnvironment
 from youwol.main_args import MainArguments
 from youwol.middlewares.models_dispatch import AbstractDispatch
+from youwol.pipelines.pipeline_typescript_weback_npm import lib_ts_webpack_template, app_ts_webpack_template
 from youwol.routers.custom_commands.models import Command
 from youwol.utils.utils_low_level import sed_inplace
 from youwol_utils import decode_id
@@ -169,7 +170,11 @@ class ConfigurationFactory(IConfigurationFactory):
             dataDir=Path(__file__).parent / 'databases',
             cacheDir=Path(__file__).parent / 'youwol_system',
             projects=Projects(
-                finder=Path(__file__).parent
+                finder=Path(__file__).parent,
+                templates=[
+                    lib_ts_webpack_template(folder=Path(__file__).parent / 'projects'),
+                    app_ts_webpack_template(folder=Path(__file__).parent / 'projects')
+                ],
             ),
             dispatches=[
                 BrotliDecompress()
