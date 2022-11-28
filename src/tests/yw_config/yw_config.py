@@ -8,22 +8,17 @@ import brotli
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from youwol.configuration.models_config import Projects
-from youwol.configuration.models_config import RemoteConfig, DirectAuthUser
-from youwol.environment.clients import RemoteClients
-from youwol.environment.config_from_module import IConfigurationFactory, Configuration
-from youwol.environment.youwol_environment import YouwolEnvironment
+
+from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label
+
+from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, Impersonation, \
+    ImpersonateAuthConnection, LocalEnvironment, CustomMiddleware, FlowSwitcherMiddleware, CdnSwitch, \
+    RemoteClients, IConfigurationFactory, Configuration, get_standard_youwol_cloud, YouwolEnvironment, LocalClients
 from youwol.main_args import MainArguments
-from youwol.middlewares.models_dispatch import AbstractDispatch
 from youwol.pipelines.pipeline_typescript_weback_npm import lib_ts_webpack_template, app_ts_webpack_template
-from youwol.routers.custom_commands.models import Command
-from youwol.utils.utils_low_level import sed_inplace
-from youwol_utils import decode_id
-from youwol_utils import execute_shell_cmd
-from youwol_utils.clients.oidc.oidc_config import PublicClient
-from youwol_utils.context import Context
-from youwol_utils.request_info_factory import url_match
-from youwol_utils.utils_paths import parse_json
+from youwol.routers.custom_commands import Command
+
+import youwol.pipelines.pipeline_typescript_weback_npm as pipeline_ts
 
 
 async def clone_project(git_url: str, new_project_name: str, ctx: Context):
@@ -46,22 +41,23 @@ async def clone_project(git_url: str, new_project_name: str, ctx: Context):
 
 async def purge_downloads(context: Context):
     async with context.start(action="purge_downloads", muted_http_errors={404}) as ctx:  # type: Context
-        env = await ctx.get('env', YouwolEnvironment)
-        host = env.selectedRemote
-        assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
         env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
-        default_drive = await env.get_default_drive(context=ctx)
-        treedb_client = assets_gtw.get_treedb_backend_router()
+        assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=env.currentConnection.host, context=ctx)
         headers = ctx.headers()
+        default_drive = await LocalClients \
+            .get_assets_gateway_client(env)\
+            .get_treedb_backend_router() \
+            .get_default_user_drive(headers=context.headers())
+        treedb_client = assets_gtw.get_treedb_backend_router()
         resp = await treedb_client.get_children(
-            folder_id=default_drive.downloadFolderId,
+            folder_id=default_drive['downloadFolderId'],
             headers=headers
         )
         await asyncio.gather(
             *[treedb_client.remove_item(item_id=item["treeId"], headers=headers) for item in resp["items"]],
             *[treedb_client.remove_folder(folder_id=item["folderId"], headers=headers) for item in resp["folders"]]
         )
-        await treedb_client.purge_drive(drive_id=default_drive.driveId, headers=headers)
+        await treedb_client.purge_drive(drive_id=default_drive['driveId'], headers=headers)
         return {}
 
 
@@ -79,8 +75,8 @@ async def reset(ctx: Context):
 
 async def create_test_data_remote(context: Context):
     async with context.start("create_new_story_remote") as ctx:
-        env = await context.get('env', YouwolEnvironment)
-        host = env.selectedRemote
+        env: YouwolEnvironment = await context.get('env', YouwolEnvironment)
+        host = env.currentConnection.host
         await ctx.info(f"selected Host for creation: {host}")
         gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
 
@@ -115,21 +111,27 @@ async def create_test_data_remote(context: Context):
         return resp
 
 
-class BrotliDecompress(AbstractDispatch):
+class BrotliDecompressMiddleware(CustomMiddleware):
 
-    async def apply(self, incoming_request: Request, call_next: RequestResponseEndpoint, context: Context):
+    """
+        Simple middleware that logs incoming and outgoing headers
+        """
+    async def dispatch(
+            self,
+            incoming_request: Request,
+            call_next: RequestResponseEndpoint,
+            context: Context
+    ):
 
-        match_cdn, params = url_match(incoming_request, "GET:/api/assets-gateway/raw/package/*/**")
-        env = await context.get('env', YouwolEnvironment)
-        if match_cdn and len(params) > 0 and decode_id(params[0]) in env.portsBook:
-            return None
+        async with context.start(
+                action="BrotliDecompressMiddleware.dispatch",
+                with_labels=[Label.MIDDLEWARE]
+        ) as ctx:  # type: Context
 
-        match_files, _ = url_match(incoming_request, "GET:/api/assets-gateway/files-backend/files/*")
-        if match_cdn or match_files:
             response = await call_next(incoming_request)
             if response.headers.get('content-encoding') != 'br':
                 return response
-
+            await ctx.info(text="Got 'br' content-encoding => apply brotli decompresson")
             await context.info("Apply brotli decompression")
             binary = b''
             # noinspection PyUnresolvedReferences
@@ -141,34 +143,36 @@ class BrotliDecompress(AbstractDispatch):
             resp = Response(decompressed.decode('utf8'), headers=headers)
             return resp
 
-        return None
 
-    def __str__(self):
-        return "Decompress brotli on te fly because in jest brotli is not supported"
+pipeline_ts.set_environment()
 
 
 class ConfigurationFactory(IConfigurationFactory):
 
     async def get(self, main_args: MainArguments) -> Configuration:
-        username = os.getenv("USERNAME_INTEGRATION_TESTS")
-        password = os.getenv("PASSWORD_INTEGRATION_TESTS")
-        username_bis = os.getenv("USERNAME_INTEGRATION_TESTS_BIS")
-        password_bis = os.getenv("PASSWORD_INTEGRATION_TESTS_BIS")
+
+        host = "platform.youwol.com"
+        users = [
+            (os.getenv("USERNAME_INTEGRATION_TESTS"), os.getenv("PASSWORD_INTEGRATION_TESTS")),
+            (os.getenv("USERNAME_INTEGRATION_TESTS_BIS"), os.getenv("PASSWORD_INTEGRATION_TESTS_BIS"))
+        ]
+        impersonations = [Impersonation(userId=email, userName=email, password=pwd, forHosts=[host])
+                          for email, pwd in users]
+
         return Configuration(
-            remotes=[
-                RemoteConfig.build(
-                    default_user=username,
-                    direct_auth_users=[DirectAuthUser(username=username, password=password),
-                                       DirectAuthUser(username=username_bis, password=password_bis)],
-                    openid_client=PublicClient(
-                        client_id="tbd_test_openid_connect_js"
-                    ),
-                    host="platform.youwol.com"
-                )
-            ],
-            httpPort=2001,
-            dataDir=Path(__file__).parent / 'databases',
-            cacheDir=Path(__file__).parent / 'youwol_system',
+            system=System(
+                httpPort=2001,
+                cloudEnvironments=CloudEnvironments(
+                    defaultConnection=ImpersonateAuthConnection(host=host, userId=users[0][0]),
+                    environments=[
+                        get_standard_youwol_cloud(host=host),
+                    ],
+                    impersonations=impersonations
+                ),
+                localEnvironment=LocalEnvironment(
+                    dataDir=Path(__file__).parent / 'databases',
+                    cacheDir=Path(__file__).parent / 'youwol_system',)
+                ),
             projects=Projects(
                 finder=Path(__file__).parent,
                 templates=[
@@ -176,39 +180,47 @@ class ConfigurationFactory(IConfigurationFactory):
                     app_ts_webpack_template(folder=Path(__file__).parent / 'projects')
                 ],
             ),
-            dispatches=[
-                BrotliDecompress()
-            ],
-            customCommands=[
-                Command(
-                    name="reset",
-                    do_get=lambda ctx: reset(ctx)
-                ),
-                Command(
-                    name="clone-project",
-                    do_post=lambda body, ctx: clone_project(body['url'], body['name'], ctx)
-                ),
-                Command(
-                    name="purge-downloads",
-                    do_delete=lambda ctx: purge_downloads(ctx)
-                ),
-                Command(
-                    name="create-test-data-remote",
-                    do_get=lambda ctx: create_test_data_remote(ctx)
-                ),
-                Command(
-                    name="test-cmd-post",
-                    do_post=lambda body, ctx: test_command_post(body, ctx)
-                ),
-                Command(
-                    name="test-cmd-put",
-                    do_put=lambda body, ctx: body["returnObject"]
-                ),
-                Command(
-                    name="test-cmd-delete",
-                    do_delete=lambda ctx: {"status": "deleted"}
-                ),
-            ],
+            customization=Customization(
+                middlewares=[
+                    FlowSwitcherMiddleware(
+                        name="CDN live servers",
+                        oneOf=[CdnSwitch(packageName="package-name", port=3006)],
+                    ),
+                    BrotliDecompressMiddleware()
+                ],
+                endPoints=CustomEndPoints(
+                    commands=[
+                        Command(
+                            name="reset",
+                            do_get=lambda ctx: reset(ctx)
+                        ),
+                        Command(
+                            name="clone-project",
+                            do_post=lambda body, ctx: clone_project(body['url'], body['name'], ctx)
+                        ),
+                        Command(
+                            name="purge-downloads",
+                            do_delete=lambda ctx: purge_downloads(ctx)
+                        ),
+                        Command(
+                            name="create-test-data-remote",
+                            do_get=lambda ctx: create_test_data_remote(ctx)
+                        ),
+                        Command(
+                            name="test-cmd-post",
+                            do_post=lambda body, ctx: test_command_post(body, ctx)
+                        ),
+                        Command(
+                            name="test-cmd-put",
+                            do_put=lambda body, ctx: body["returnObject"]
+                        ),
+                        Command(
+                            name="test-cmd-delete",
+                            do_delete=lambda ctx: {"status": "deleted"}
+                        ),
+                    ]
+                )
+            )
         )
 
 
