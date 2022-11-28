@@ -26,7 +26,7 @@ test('query healthz', (done) => {
 
 test('pyYouwol.admin.environment.login', (done) => {
     pyYouwol.admin.environment
-        .login$({ body: { email: 'int_tests_yw-users_bis@test-user' } })
+        .login$({ body: { userId: 'int_tests_yw-users_bis@test-user' } })
         .pipe(raiseHTTPErrors())
         .subscribe((resp) => {
             expectAttributes(resp, ['id', 'name', 'email', 'memberOf'])

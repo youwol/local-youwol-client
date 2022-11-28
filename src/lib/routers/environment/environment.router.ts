@@ -52,7 +52,7 @@ export class EnvironmentRouter extends Router {
         body,
         callerOptions,
     }: {
-        body: { email: string }
+        body: { userId: string }
         callerOptions?: CallerRequestOptions
     }): HTTPResponse$<LoginResponse> {
         return this.send$({
