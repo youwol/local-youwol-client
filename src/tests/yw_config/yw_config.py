@@ -11,9 +11,10 @@ from starlette.responses import Response
 
 from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label
 
-from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, Impersonation, \
-    ImpersonateAuthConnection, LocalEnvironment, CustomMiddleware, FlowSwitcherMiddleware, CdnSwitch, \
-    RemoteClients, IConfigurationFactory, Configuration, get_standard_youwol_cloud, YouwolEnvironment, LocalClients
+from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, DirectAuth, \
+    LocalEnvironment, CustomMiddleware, FlowSwitcherMiddleware, CdnSwitch, \
+    RemoteClients, IConfigurationFactory, Configuration, YouwolEnvironment, LocalClients, CloudEnvironment, \
+    get_standard_auth_provider, Connection
 from youwol.main_args import MainArguments
 from youwol.pipelines.pipeline_typescript_weback_npm import lib_ts_webpack_template, app_ts_webpack_template
 from youwol.routers.custom_commands import Command
@@ -42,7 +43,10 @@ async def clone_project(git_url: str, new_project_name: str, ctx: Context):
 async def purge_downloads(context: Context):
     async with context.start(action="purge_downloads", muted_http_errors={404}) as ctx:  # type: Context
         env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
-        assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=env.currentConnection.host, context=ctx)
+        assets_gtw = await RemoteClients.get_assets_gateway_client(
+            remote_host=env.get_remote_info().host,
+            context=ctx
+        )
         headers = ctx.headers()
         default_drive = await LocalClients \
             .get_assets_gateway_client(env)\
@@ -76,7 +80,7 @@ async def reset(ctx: Context):
 async def create_test_data_remote(context: Context):
     async with context.start("create_new_story_remote") as ctx:
         env: YouwolEnvironment = await context.get('env', YouwolEnvironment)
-        host = env.currentConnection.host
+        host = env.get_remote_info().host
         await ctx.info(f"selected Host for creation: {host}")
         gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
 
@@ -147,32 +151,37 @@ class BrotliDecompressMiddleware(CustomMiddleware):
 pipeline_ts.set_environment()
 
 
+users = [
+    (os.getenv("USERNAME_INTEGRATION_TESTS"), os.getenv("PASSWORD_INTEGRATION_TESTS")),
+    (os.getenv("USERNAME_INTEGRATION_TESTS_BIS"), os.getenv("PASSWORD_INTEGRATION_TESTS_BIS"))
+]
+direct_auths = [DirectAuth(authId=email, userName=email, password=pwd)
+                for email, pwd in users]
+
+prod_env = CloudEnvironment(
+    envId="prod",
+    host="platform.youwol.com",
+    authProvider=get_standard_auth_provider("platform.youwol.com"),
+    authentications=direct_auths
+)
+
+
 class ConfigurationFactory(IConfigurationFactory):
 
     async def get(self, main_args: MainArguments) -> Configuration:
-
-        host = "platform.youwol.com"
-        users = [
-            (os.getenv("USERNAME_INTEGRATION_TESTS"), os.getenv("PASSWORD_INTEGRATION_TESTS")),
-            (os.getenv("USERNAME_INTEGRATION_TESTS_BIS"), os.getenv("PASSWORD_INTEGRATION_TESTS_BIS"))
-        ]
-        impersonations = [Impersonation(userId=email, userName=email, password=pwd, forHosts=[host])
-                          for email, pwd in users]
 
         return Configuration(
             system=System(
                 httpPort=2001,
                 cloudEnvironments=CloudEnvironments(
-                    defaultConnection=ImpersonateAuthConnection(host=host, userId=users[0][0]),
-                    environments=[
-                        get_standard_youwol_cloud(host=host),
-                    ],
-                    impersonations=impersonations
+                    defaultConnection=Connection(envId='prod', authId=direct_auths[0].authId),
+                    environments=[prod_env]
                 ),
                 localEnvironment=LocalEnvironment(
                     dataDir=Path(__file__).parent / 'databases',
-                    cacheDir=Path(__file__).parent / 'youwol_system',)
-                ),
+                    cacheDir=Path(__file__).parent / 'youwol_system'
+                )
+            ),
             projects=Projects(
                 finder=Path(__file__).parent,
                 templates=[
