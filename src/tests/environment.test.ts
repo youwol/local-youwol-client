@@ -20,7 +20,9 @@ beforeAll(async (done) => {
 
 test('pyYouwol.admin.environment.login', (done) => {
     pyYouwol.admin.environment
-        .login$({ body: { email: 'int_tests_yw-users_bis@test-user' } })
+        .login$({
+            body: { authId: 'int_tests_yw-users_bis@test-user', envId: 'prod' },
+        })
         .pipe(raiseHTTPErrors())
         .subscribe((resp) => {
             expectAttributes(resp, ['id', 'name', 'email', 'memberOf'])
@@ -84,8 +86,8 @@ test('pyYouwol.admin.environment.customDispatches', (done) => {
             raiseHTTPErrors(),
             tap((resp) => {
                 expectAttributes(resp, ['dispatches'])
-                expectAttributes(resp.dispatches, ['BrotliDecompress'])
-                expect(resp.dispatches.BrotliDecompress).toHaveLength(1)
+                expectAttributes(resp.dispatches, ['CDN live servers'])
+                expect(resp.dispatches['CDN live servers']).toHaveLength(1)
             }),
         )
         .subscribe(() => {

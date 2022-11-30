@@ -88,10 +88,10 @@ export function expectEnvironment(resp) {
     expectAttributes(resp.configuration, [
         'httpPort',
         'commands',
-        'selectedUser',
-        'selectedRemote',
+        'currentConnection',
         'pathsBook',
     ])
+    expectAttributes(resp.configuration.currentConnection, ['envId', 'authId'])
 }
 
 export function expectUpdateStatus(resp) {

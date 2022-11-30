@@ -16,7 +16,7 @@ export function setup$(
     return PyYouwolClient.startWs$().pipe(
         mergeMap(() =>
             new PyYouwolClient().admin.environment.login$({
-                body: { email },
+                body: { authId: email, envId: 'prod' },
             }),
         ),
         mergeMap(() => {
