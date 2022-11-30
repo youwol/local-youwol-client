@@ -91,7 +91,7 @@ export function expectEnvironment(resp) {
         'currentConnection',
         'pathsBook',
     ])
-    expectAttributes(resp.configuration.currentConnection, ['host', 'userId'])
+    expectAttributes(resp.configuration.currentConnection, ['envId', 'authId'])
 }
 
 export function expectUpdateStatus(resp) {
