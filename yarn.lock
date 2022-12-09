@@ -1096,10 +1096,10 @@
   dependencies:
     semver "^7.3.4"
 
-"@youwol/eslint-config@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@youwol/eslint-config/-/eslint-config-0.0.2.tgz#7f09617f60ba61e71fb43e964f0bf5db8c107807"
-  integrity sha512-4K/euIHPo2qATnO7WrAEuE7Y+9xgnzXRFI8fclS0qyTN7nH5Th+cC1kOMt2VFwNHCiHt3YkGjFncFHbcju7l7A==
+"@youwol/eslint-config@^0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@youwol/eslint-config/-/eslint-config-0.0.4.tgz#f5ca190a60173d67dd01306587c0ac0dc1d184e0"
+  integrity sha512-TdsslNgIeh/zOw/h20FNK7I8TW67YrIc0doNzodVyM0agUsHQbxvUKZt590DqVJ03UTDsGR3xSEu3ivkDmZzEw==
 
 "@youwol/http-clients@^2.0.1":
   version "2.0.1"
