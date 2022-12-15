@@ -146,6 +146,24 @@ async def create_test_data_remote(context: Context):
         return resp
 
 
+async def erase_all_test_data_remote(context: Context):
+
+    async with context.start("erase_all_test_data_remote") as ctx:
+        env: YouwolEnvironment = await context.get('env', YouwolEnvironment)
+        host = env.get_remote_info().host
+        await ctx.info(f"selected Host for deletion: {host}")
+        drive_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive'
+        folder_id = f'{drive_id}_home'
+        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        resp = await gtw.get_treedb_backend_router().get_children(folder_id=folder_id, headers=ctx.headers())
+        await asyncio.gather(*[
+            gtw.get_treedb_backend_router().remove_item(item_id=item['itemId'], headers=ctx.headers())
+            for item in resp['items']
+        ])
+        await gtw.get_treedb_backend_router().purge_drive(drive_id=drive_id, headers=ctx.headers())
+        return {"items": resp['items']}
+
+
 class BrotliDecompressMiddleware(CustomMiddleware):
 
     """
