@@ -82,31 +82,45 @@ async def create_test_data_remote(context: Context):
         env: YouwolEnvironment = await context.get('env', YouwolEnvironment)
         host = env.get_remote_info().host
         await ctx.info(f"selected Host for creation: {host}")
+        folder_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home'
         gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
 
-        resp_stories = await gtw.get_stories_backend_router().create_story(body={
-            "storyId": "504039f7-a51f-403d-9672-577b846fdbd8",
-            "title": "New story (remote test data in http-clients)"
-        }, params=[('folder-id', 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home')])
+        resp_stories = await gtw.get_stories_backend_router().create_story(
+            body={
+                "storyId": "504039f7-a51f-403d-9672-577b846fdbd8",
+                "title": "Story (remote test data in local-youwol-client)"
+            },
+            params=[('folder-id', folder_id)],
+            headers=ctx.headers()
+        )
 
-        resp_flux = await gtw.get_flux_backend_router().create_project(body={
-            "projectId": "2d5cafa9-f903-4fa7-b343-b49dfba20023",
-            "description": 'a flux project dedicated to test in http-clients',
-            "name": "New flux-project (remote test data in http-clients)"
-        }, params=[('folder-id', 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home')])
+        resp_flux = await gtw.get_flux_backend_router().create_project(
+            body={
+                "projectId": "2d5cafa9-f903-4fa7-b343-b49dfba20023",
+                "description": 'a flux project dedicated to test in http-clients',
+                "name": "Flux-project (remote test data in local-youwol-client)"
+            },
+            params=[('folder-id', folder_id)],
+            headers=ctx.headers()
+        )
 
-        content = json.dumps({'description': 'a file uploaded in remote env for test purposes (http-clients)'})
+        content = json.dumps({'description': 'a file uploaded in remote env for test purposes (local-youwol-client)'})
         form = {
             'file': str.encode(content),
             'content_type': 'application/json',
             'file_id': "f72290f2-90bc-4192-80ca-20f983a1213d",
-            'file_name': "Uploaded file (remote test data in http-clients)"
+            'file_name': "Uploaded file (remote test data in local-youwol-client)"
         }
         resp_data = await gtw.get_files_backend_router().upload(
             data=form,
-            params=[('folder-id', 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home')]
+            params=[('folder-id', folder_id)],
+            headers=ctx.headers()
         )
         resp = {
+            "respCustomAsset": {
+                "asset": asset_resp,
+                "addFiles": upload_resp
+            },
             "respStories": resp_stories,
             "respFlux": resp_flux,
             "respData": resp_data
