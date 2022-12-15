@@ -262,6 +262,10 @@ test('download custom asset with files', (done) => {
             __dirname,
             './test-data/test-download-asset-files.zip',
         )
+        public readonly blobZip: Blob
+        constructor(params = {}) {
+            Object.assign(this, params)
+        }
     }
 
     shell$<Context>(new Context())
@@ -290,21 +294,36 @@ test('download custom asset with files', (done) => {
                     }
                 },
                 {
-                    sideEffects: (response, shell) => {
-                        const fileReader = new FileReader()
-                        fileReader.onload = function (event) {
-                            const buffer = event.target.result as ArrayBuffer
-                            writeFileSync(
-                                shell.context.zipPath,
-                                Buffer.from(buffer),
-                            )
-                        }
-                        fileReader.readAsArrayBuffer(response)
+                    newShell: (shell, resp) => {
+                        return new Shell<Context>({
+                            context: new Context({
+                                ...shell.context,
+                                blobZip: resp,
+                            }),
+                        })
                     },
                 },
             ),
             mergeMap((shell) => {
+                return from(
+                    new Response(shell.context.blobZip)
+                        .arrayBuffer()
+                        .then((buffer) => {
+                            writeFileSync(
+                                shell.context.zipPath,
+                                Buffer.from(buffer),
+                            )
+                            console.log(
+                                'Save files of asset in zip',
+                                shell.context.zipPath,
+                            )
+                            return shell
+                        }),
+                )
+            }),
+            mergeMap((shell) => {
                 const promise = new Promise((resolve) => {
+                    console.log('ensure content of zip', shell.context.zipPath)
                     const zipped = new AdmZip(shell.context.zipPath)
 
                     zipped.readAsTextAsync('topLevelFile.json', (data) => {
