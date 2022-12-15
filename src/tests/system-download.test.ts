@@ -270,7 +270,6 @@ test('download custom asset with files', (done) => {
 
     shell$<Context>(new Context())
         .pipe(
-            // make sure the asset exist and can be retrieved from deployed env
             getAsset(
                 (shell) => {
                     return {
@@ -313,19 +312,13 @@ test('download custom asset with files', (done) => {
                                 shell.context.zipPath,
                                 Buffer.from(buffer),
                             )
-                            console.log(
-                                'Save files of asset in zip',
-                                shell.context.zipPath,
-                            )
                             return shell
                         }),
                 )
             }),
             mergeMap((shell) => {
                 const promise = new Promise((resolve) => {
-                    console.log('ensure content of zip', shell.context.zipPath)
                     const zipped = new AdmZip(shell.context.zipPath)
-
                     zipped.readAsTextAsync('topLevelFile.json', (data) => {
                         expect(JSON.parse(data).summary).toBe(
                             'a file at the top level',
