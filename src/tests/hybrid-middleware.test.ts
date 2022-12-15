@@ -1,10 +1,19 @@
 // eslint-disable-next-line eslint-comments/disable-enable-pair -- to not have problem
 /* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
 import { remoteStoryAssetId } from './remote_assets_id'
-import { getAsset, getPermissions, Shell, shell$ } from './shell'
+import {
+    expectDownloadEvents,
+    getAsset,
+    getPermissions,
+    Shell,
+    shell$,
+} from './shell'
 import { setup$ } from './local-youwol-test-setup'
+import { PyYouwolClient } from '../lib'
 
 jest.setTimeout(20 * 1000)
+
+const pyYouwol = new PyYouwolClient()
 
 beforeEach((done) => {
     setup$({
@@ -35,10 +44,12 @@ test('can retrieve asset info when remote only', (done) => {
                     },
                 },
             ),
+            expectDownloadEvents(pyYouwol),
             getPermissions(
                 (shell) => {
                     return {
                         assetId: shell.context.assetId,
+                        callerOptions: { headers: { localOnly: 'true' } },
                     }
                 },
                 {

@@ -8,13 +8,15 @@ import brotli
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+from youwol.main_args import MainArguments
+from youwol.routers.projects import ProjectLoader
 
 from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label
 
 from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, DirectAuth, \
     LocalEnvironment, CustomMiddleware, FlowSwitcherMiddleware, CdnSwitch, \
     RemoteClients, Command, Configuration, YouwolEnvironment, LocalClients, CloudEnvironment, \
-    get_standard_auth_provider, Connection
+    get_standard_auth_provider, Connection, IConfigurationFactory
 from youwol.pipelines.pipeline_typescript_weback_npm import lib_ts_webpack_template, app_ts_webpack_template
 
 
@@ -74,6 +76,7 @@ async def reset(ctx: Context):
     os.mkdir(parent_folder / "projects")
     shutil.copytree(src=parent_folder / "empty_databases",
                     dst=parent_folder / "databases")
+    await ProjectLoader.initialize(env=env)
 
 
 async def create_test_data_remote(context: Context):
@@ -81,37 +84,86 @@ async def create_test_data_remote(context: Context):
         env: YouwolEnvironment = await context.get('env', YouwolEnvironment)
         host = env.get_remote_info().host
         await ctx.info(f"selected Host for creation: {host}")
+        folder_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home'
         gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        asset_resp = await gtw.get_assets_backend_router().create_asset(
+            body={
+                "rawId": "test-custom-asset",
+                "kind": "custom-asset",
+                "name": "Asset + files (remote test data in local-youwol-client)",
+                "description": "A custom asset used to test posting files and auto-download of assets with files",
+                "tags": ["integration-test", "local-youwol-client"]
+            },
+            params=[('folder-id', folder_id)],
+            headers=ctx.headers()
+        )
+        data = open(Path(__file__).parent / 'test-add-files.zip', 'rb').read()
+        upload_resp = await gtw.get_assets_backend_router().add_zip_files(
+            asset_id=asset_resp["assetId"],
+            data=data,
+            headers=ctx.headers()
+        )
 
-        resp_stories = await gtw.get_stories_backend_router().create_story(body={
-            "storyId": "504039f7-a51f-403d-9672-577b846fdbd8",
-            "title": "New story (remote test data in http-clients)"
-        }, params=[('folder-id', 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home')])
+        resp_stories = await gtw.get_stories_backend_router().create_story(
+            body={
+                "storyId": "504039f7-a51f-403d-9672-577b846fdbd8",
+                "title": "Story (remote test data in local-youwol-client)"
+            },
+            params=[('folder-id', folder_id)],
+            headers=ctx.headers()
+        )
 
-        resp_flux = await gtw.get_flux_backend_router().create_project(body={
-            "projectId": "2d5cafa9-f903-4fa7-b343-b49dfba20023",
-            "description": 'a flux project dedicated to test in http-clients',
-            "name": "New flux-project (remote test data in http-clients)"
-        }, params=[('folder-id', 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home')])
+        resp_flux = await gtw.get_flux_backend_router().create_project(
+            body={
+                "projectId": "2d5cafa9-f903-4fa7-b343-b49dfba20023",
+                "description": 'a flux project dedicated to test in http-clients',
+                "name": "Flux-project (remote test data in local-youwol-client)"
+            },
+            params=[('folder-id', folder_id)],
+            headers=ctx.headers()
+        )
 
-        content = json.dumps({'description': 'a file uploaded in remote env for test purposes (http-clients)'})
+        content = json.dumps({'description': 'a file uploaded in remote env for test purposes (local-youwol-client)'})
         form = {
             'file': str.encode(content),
             'content_type': 'application/json',
             'file_id': "f72290f2-90bc-4192-80ca-20f983a1213d",
-            'file_name': "Uploaded file (remote test data in http-clients)"
+            'file_name': "Uploaded file (remote test data in local-youwol-client)"
         }
         resp_data = await gtw.get_files_backend_router().upload(
             data=form,
-            params=[('folder-id', 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home')]
+            params=[('folder-id', folder_id)],
+            headers=ctx.headers()
         )
         resp = {
+            "respCustomAsset": {
+                "asset": asset_resp,
+                "addFiles": upload_resp
+            },
             "respStories": resp_stories,
             "respFlux": resp_flux,
             "respData": resp_data
         }
         await ctx.info(f"Story successfully created", data=resp)
         return resp
+
+
+async def erase_all_test_data_remote(context: Context):
+
+    async with context.start("erase_all_test_data_remote") as ctx:
+        env: YouwolEnvironment = await context.get('env', YouwolEnvironment)
+        host = env.get_remote_info().host
+        await ctx.info(f"selected Host for deletion: {host}")
+        drive_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive'
+        folder_id = f'{drive_id}_home'
+        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        resp = await gtw.get_treedb_backend_router().get_children(folder_id=folder_id, headers=ctx.headers())
+        await asyncio.gather(*[
+            gtw.get_treedb_backend_router().remove_item(item_id=item['itemId'], headers=ctx.headers())
+            for item in resp['items']
+        ])
+        await gtw.get_treedb_backend_router().purge_drive(drive_id=drive_id, headers=ctx.headers())
+        return {"items": resp['items']}
 
 
 class BrotliDecompressMiddleware(CustomMiddleware):
@@ -170,64 +222,70 @@ async def test_command_post(body, context: Context):
     return body["returnObject"]
 
 
-Configuration(
-    system=System(
-        httpPort=2001,
-        cloudEnvironments=CloudEnvironments(
-            defaultConnection=Connection(envId='prod', authId=direct_auths[0].authId),
-            environments=[prod_env]
-        ),
-        localEnvironment=LocalEnvironment(
-            dataDir=Path(__file__).parent / 'databases',
-            cacheDir=Path(__file__).parent / 'youwol_system'
-        )
-    ),
-    projects=Projects(
-        finder=Path(__file__).parent,
-        templates=[
-            lib_ts_webpack_template(folder=Path(__file__).parent / 'projects'),
-            app_ts_webpack_template(folder=Path(__file__).parent / 'projects')
-        ],
-    ),
-    customization=Customization(
-        middlewares=[
-            FlowSwitcherMiddleware(
-                name="CDN live servers",
-                oneOf=[CdnSwitch(packageName="package-name", port=3006)],
+class ConfigurationFactory(IConfigurationFactory):
+    async def get(self, _main_args: MainArguments) -> Configuration:
+        return Configuration(
+            system=System(
+                httpPort=2001,
+                cloudEnvironments=CloudEnvironments(
+                    defaultConnection=Connection(envId='prod', authId=direct_auths[0].authId),
+                    environments=[prod_env]
+                ),
+                localEnvironment=LocalEnvironment(
+                    dataDir=Path(__file__).parent / 'databases',
+                    cacheDir=Path(__file__).parent / 'youwol_system'
+                )
             ),
-            BrotliDecompressMiddleware()
-        ],
-        endPoints=CustomEndPoints(
-            commands=[
-                Command(
-                    name="reset",
-                    do_get=lambda ctx: reset(ctx)
-                ),
-                Command(
-                    name="clone-project",
-                    do_post=lambda body, ctx: clone_project(body['url'], body['name'], ctx)
-                ),
-                Command(
-                    name="purge-downloads",
-                    do_delete=lambda ctx: purge_downloads(ctx)
-                ),
-                Command(
-                    name="create-test-data-remote",
-                    do_get=lambda ctx: create_test_data_remote(ctx)
-                ),
-                Command(
-                    name="test-cmd-post",
-                    do_post=lambda body, ctx: test_command_post(body, ctx)
-                ),
-                Command(
-                    name="test-cmd-put",
-                    do_put=lambda body, ctx: body["returnObject"]
-                ),
-                Command(
-                    name="test-cmd-delete",
-                    do_delete=lambda ctx: {"status": "deleted"}
-                ),
-            ]
+            projects=Projects(
+                finder=Path(__file__).parent,
+                templates=[
+                    lib_ts_webpack_template(folder=Path(__file__).parent / 'projects'),
+                    app_ts_webpack_template(folder=Path(__file__).parent / 'projects')
+                ],
+            ),
+            customization=Customization(
+                middlewares=[
+                    FlowSwitcherMiddleware(
+                        name="CDN live servers",
+                        oneOf=[CdnSwitch(packageName="package-name", port=3006)],
+                    ),
+                    BrotliDecompressMiddleware()
+                ],
+                endPoints=CustomEndPoints(
+                    commands=[
+                        Command(
+                            name="reset",
+                            do_get=lambda ctx: reset(ctx)
+                        ),
+                        Command(
+                            name="clone-project",
+                            do_post=lambda body, ctx: clone_project(body['url'], body['name'], ctx)
+                        ),
+                        Command(
+                            name="purge-downloads",
+                            do_delete=lambda ctx: purge_downloads(ctx)
+                        ),
+                        Command(
+                            name="create-test-data-remote",
+                            do_get=lambda ctx: create_test_data_remote(ctx)
+                        ),
+                        Command(
+                            name="erase_all_test_data_remote",
+                            do_delete=lambda ctx: erase_all_test_data_remote(ctx)
+                        ),
+                        Command(
+                            name="test-cmd-post",
+                            do_post=lambda body, ctx: test_command_post(body, ctx)
+                        ),
+                        Command(
+                            name="test-cmd-put",
+                            do_put=lambda body, ctx: body["returnObject"]
+                        ),
+                        Command(
+                            name="test-cmd-delete",
+                            do_delete=lambda ctx: {"status": "deleted"}
+                        ),
+                    ]
+                )
+            )
         )
-    )
-)

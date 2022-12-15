@@ -13,14 +13,17 @@ import {
     raiseHTTPErrors,
     Shell as ShellBase,
     ShellWrapperOptions,
+    CallerRequestOptions,
     wrap,
 } from '@youwol/http-primitives'
 import { readFileSync } from 'fs'
 import { Observable } from 'rxjs'
-import { map } from 'rxjs/operators'
+import { map, mapTo, mergeMap, reduce, takeWhile, tap } from 'rxjs/operators'
 
 import { PyYouwolClient } from '../lib'
 import { UploadAssetResponse } from '../lib/routers/environment'
+import { CreateAssetBody } from '@youwol/http-clients/src/lib/assets-backend/interfaces'
+import { NewAssetResponse } from '@youwol/http-clients/src/lib/assets-gateway'
 
 export class Shell<T> extends ShellBase<T> {
     public readonly assetsGtw: AssetsGateway.Client
@@ -180,9 +183,52 @@ export function getAsset<TContext>(
     })
 }
 
+export function createAssetWithFiles<TContext>(
+    inputs: (shell: Shell<TContext>) => {
+        body: CreateAssetBody
+        queryParameters?: { folderId?: string }
+        zipPath: string
+    },
+    params?: ShellWrapperOptions<
+        Shell<TContext>,
+        NewAssetResponse<Record<string, never>>
+    >,
+) {
+    return wrap<Shell<TContext>, NewAssetResponse<Record<string, never>>>({
+        observable: (shell: Shell<TContext>) =>
+            shell.assetsGtw.assets.createAsset$(inputs(shell)).pipe(
+                raiseHTTPErrors(),
+                mergeMap((asset) => {
+                    const { zipPath } = inputs(shell)
+                    const buffer = readFileSync(zipPath)
+                    const content = new Blob([Uint8Array.from(buffer).buffer])
+
+                    return shell.assetsGtw.assets
+                        .addZipFiles$({
+                            assetId: asset.assetId,
+                            body: {
+                                content,
+                            },
+                        })
+                        .pipe(
+                            tap((resp) => {
+                                expectAttributes(resp, [
+                                    'filesCount',
+                                    'totalBytes',
+                                ])
+                            }),
+                            mapTo(asset),
+                        )
+                }),
+            ),
+        ...params,
+    })
+}
+
 export function getPermissions<TContext>(
     inputs: (shell: Shell<TContext>) => {
         assetId: string
+        callerOptions: CallerRequestOptions
     },
     params?: ShellWrapperOptions<
         Shell<TContext>,
@@ -193,6 +239,22 @@ export function getPermissions<TContext>(
         observable: (shell: Shell<TContext>) => {
             return shell.assetsGtw.assets.getPermissions$(inputs(shell))
         },
+        ...params,
+    })
+}
+
+export function getItem<TContext>(
+    inputs: (shell: Shell<TContext>) => {
+        itemId: string
+    },
+    params?: ShellWrapperOptions<
+        Shell<TContext>,
+        ExplorerBackend.GetItemResponse
+    >,
+) {
+    return wrap<Shell<TContext>, ExplorerBackend.GetItemResponse>({
+        observable: (shell: Shell<TContext>) =>
+            shell.assetsGtw.explorer.getItem$(inputs(shell)),
         ...params,
     })
 }
@@ -313,4 +375,43 @@ export function getFileInfo<TContext>(
         },
         ...params,
     })
+}
+
+export function getAssetZipFiles<TContext>(
+    inputs: (shell: Shell<TContext>) => {
+        assetId: string
+        callerOptions?: CallerRequestOptions
+    },
+    params?: ShellWrapperOptions<Shell<TContext>, Blob>,
+) {
+    return wrap<Shell<TContext>, Blob>({
+        observable: (shell: Shell<TContext>) => {
+            return shell.assetsGtw.assets.getZipFiles$(inputs(shell))
+        },
+        ...params,
+    })
+}
+
+export function expectDownloadEvents(pyYouwol: PyYouwolClient) {
+    return (observable: Observable<Shell<{ assetId: string }>>) =>
+        observable.pipe(
+            mergeMap((shell) =>
+                pyYouwol.admin.system.webSocket.downloadEvent$().pipe(
+                    takeWhile((event) => {
+                        if (event.data.type == 'failed') {
+                            throw Error('Failed to download asset')
+                        }
+                        return event.data && event.data.type != 'succeeded'
+                    }, true),
+                    reduce((acc, e) => [...acc, e], []),
+                    tap((events) => {
+                        expect([2, 3].includes(events.length)).toBeTruthy()
+                        expect(events.slice(-1)[0].data.rawId).toBe(
+                            window.atob(shell.context.assetId),
+                        )
+                    }),
+                    mapTo(shell),
+                ),
+            ),
+        )
 }

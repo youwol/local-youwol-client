@@ -1,7 +1,7 @@
 {
     "name": "@youwol/local-youwol-client",
     "description": "Client for local py-youwol",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "author": "greinisch@youwol.com",
     "homepage": "https://github.com/youwol/local-youwol-client#README.md",
     "main": "dist/@youwol/local-youwol-client.js",
@@ -23,7 +23,8 @@
     },
     "devDependencies": {
         "@youwol/cdn-client": "^1.0.4",
-        "@youwol/http-clients": "^2.0.1",
+        "@youwol/http-clients": "^2.0.2",
+        "adm-zip": "^0.5.9",
         "@types/node": "^18.11.9",
         "typescript": "^4.7.4",
         "ts-lib": "^0.0.5",
