@@ -26,7 +26,7 @@ template = Template(
         ),
         devTime={
             "@youwol/cdn-client": "^1.0.4",
-            "@youwol/http-clients": "^2.0.1",
+            "@youwol/http-clients": "^2.0.2",
             "adm-zip": "^0.5.9"
         }
     ),

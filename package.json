@@ -23,7 +23,7 @@
     },
     "devDependencies": {
         "@youwol/cdn-client": "^1.0.4",
-        "@youwol/http-clients": "^2.0.1",
+        "@youwol/http-clients": "^2.0.2",
         "adm-zip": "^0.5.9",
         "@types/node": "^18.11.9",
         "typescript": "^4.7.4",
