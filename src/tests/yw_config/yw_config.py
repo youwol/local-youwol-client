@@ -74,6 +74,7 @@ async def reset(ctx: Context):
     os.mkdir(parent_folder / "projects")
     shutil.copytree(src=parent_folder / "empty_databases",
                     dst=parent_folder / "databases")
+    await ProjectLoader.initialize(env=env)
 
 
 async def create_test_data_remote(context: Context):
