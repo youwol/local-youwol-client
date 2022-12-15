@@ -8,13 +8,15 @@ import brotli
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+from youwol.main_args import MainArguments
+from youwol.routers.projects import ProjectLoader
 
 from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label
 
 from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, DirectAuth, \
     LocalEnvironment, CustomMiddleware, FlowSwitcherMiddleware, CdnSwitch, \
     RemoteClients, Command, Configuration, YouwolEnvironment, LocalClients, CloudEnvironment, \
-    get_standard_auth_provider, Connection
+    get_standard_auth_provider, Connection, IConfigurationFactory
 from youwol.pipelines.pipeline_typescript_weback_npm import lib_ts_webpack_template, app_ts_webpack_template
 
 
@@ -220,64 +222,70 @@ async def test_command_post(body, context: Context):
     return body["returnObject"]
 
 
-Configuration(
-    system=System(
-        httpPort=2001,
-        cloudEnvironments=CloudEnvironments(
-            defaultConnection=Connection(envId='prod', authId=direct_auths[0].authId),
-            environments=[prod_env]
-        ),
-        localEnvironment=LocalEnvironment(
-            dataDir=Path(__file__).parent / 'databases',
-            cacheDir=Path(__file__).parent / 'youwol_system'
-        )
-    ),
-    projects=Projects(
-        finder=Path(__file__).parent,
-        templates=[
-            lib_ts_webpack_template(folder=Path(__file__).parent / 'projects'),
-            app_ts_webpack_template(folder=Path(__file__).parent / 'projects')
-        ],
-    ),
-    customization=Customization(
-        middlewares=[
-            FlowSwitcherMiddleware(
-                name="CDN live servers",
-                oneOf=[CdnSwitch(packageName="package-name", port=3006)],
+class ConfigurationFactory(IConfigurationFactory):
+    async def get(self, _main_args: MainArguments) -> Configuration:
+        return Configuration(
+            system=System(
+                httpPort=2001,
+                cloudEnvironments=CloudEnvironments(
+                    defaultConnection=Connection(envId='prod', authId=direct_auths[0].authId),
+                    environments=[prod_env]
+                ),
+                localEnvironment=LocalEnvironment(
+                    dataDir=Path(__file__).parent / 'databases',
+                    cacheDir=Path(__file__).parent / 'youwol_system'
+                )
             ),
-            BrotliDecompressMiddleware()
-        ],
-        endPoints=CustomEndPoints(
-            commands=[
-                Command(
-                    name="reset",
-                    do_get=lambda ctx: reset(ctx)
-                ),
-                Command(
-                    name="clone-project",
-                    do_post=lambda body, ctx: clone_project(body['url'], body['name'], ctx)
-                ),
-                Command(
-                    name="purge-downloads",
-                    do_delete=lambda ctx: purge_downloads(ctx)
-                ),
-                Command(
-                    name="create-test-data-remote",
-                    do_get=lambda ctx: create_test_data_remote(ctx)
-                ),
-                Command(
-                    name="test-cmd-post",
-                    do_post=lambda body, ctx: test_command_post(body, ctx)
-                ),
-                Command(
-                    name="test-cmd-put",
-                    do_put=lambda body, ctx: body["returnObject"]
-                ),
-                Command(
-                    name="test-cmd-delete",
-                    do_delete=lambda ctx: {"status": "deleted"}
-                ),
-            ]
+            projects=Projects(
+                finder=Path(__file__).parent,
+                templates=[
+                    lib_ts_webpack_template(folder=Path(__file__).parent / 'projects'),
+                    app_ts_webpack_template(folder=Path(__file__).parent / 'projects')
+                ],
+            ),
+            customization=Customization(
+                middlewares=[
+                    FlowSwitcherMiddleware(
+                        name="CDN live servers",
+                        oneOf=[CdnSwitch(packageName="package-name", port=3006)],
+                    ),
+                    BrotliDecompressMiddleware()
+                ],
+                endPoints=CustomEndPoints(
+                    commands=[
+                        Command(
+                            name="reset",
+                            do_get=lambda ctx: reset(ctx)
+                        ),
+                        Command(
+                            name="clone-project",
+                            do_post=lambda body, ctx: clone_project(body['url'], body['name'], ctx)
+                        ),
+                        Command(
+                            name="purge-downloads",
+                            do_delete=lambda ctx: purge_downloads(ctx)
+                        ),
+                        Command(
+                            name="create-test-data-remote",
+                            do_get=lambda ctx: create_test_data_remote(ctx)
+                        ),
+                        Command(
+                            name="erase_all_test_data_remote",
+                            do_delete=lambda ctx: erase_all_test_data_remote(ctx)
+                        ),
+                        Command(
+                            name="test-cmd-post",
+                            do_post=lambda body, ctx: test_command_post(body, ctx)
+                        ),
+                        Command(
+                            name="test-cmd-put",
+                            do_put=lambda body, ctx: body["returnObject"]
+                        ),
+                        Command(
+                            name="test-cmd-delete",
+                            do_delete=lambda ctx: {"status": "deleted"}
+                        ),
+                    ]
+                )
+            )
         )
-    )
-)
