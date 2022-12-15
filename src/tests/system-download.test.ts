@@ -1,5 +1,5 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
-
+import AdmZip from 'adm-zip'
 import {
     raiseHTTPErrors,
     RootRouter,
@@ -8,6 +8,7 @@ import {
 } from '@youwol/http-primitives'
 
 import {
+    mapTo,
     mergeMap,
     reduce,
     skipWhile,
@@ -18,9 +19,13 @@ import {
 import { ContextMessage, PyYouwolClient } from '../lib'
 
 import { install, State } from '@youwol/cdn-client'
-import { merge, Observable, of } from 'rxjs'
-import { remoteDataFileAssetId, remoteFluxAssetId } from './remote_assets_id'
-import { getAsset, shell$ } from './shell'
+import { from, merge, Observable, of, OperatorFunction } from 'rxjs'
+import {
+    remoteCustomAssetId,
+    remoteDataFileAssetId,
+    remoteFluxAssetId,
+} from './remote_assets_id'
+import { getAsset, getAssetZipFiles, Shell, shell$ } from './shell'
 import { setup$ } from './local-youwol-test-setup'
 import { DownloadEvent } from '../lib/routers/system'
 import {
@@ -28,6 +33,8 @@ import {
     PackageEventResponse,
     ResetCdnResponse,
 } from '../lib/routers/local-cdn'
+import path from 'path'
+import { writeFileSync } from 'fs'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -194,6 +201,30 @@ test('download flux-builder#latest from app URL', (done) => {
         })
 })
 
+function expectDownloadEvents() {
+    return (observable: Observable<Shell<{ assetId: string }>>) =>
+        observable.pipe(
+            mergeMap((shell) =>
+                pyYouwol.admin.system.webSocket.downloadEvent$().pipe(
+                    takeWhile((event) => {
+                        if (event.data.type == 'failed') {
+                            throw Error('Failed to download asset')
+                        }
+                        return event.data && event.data.type != 'succeeded'
+                    }, true),
+                    reduce((acc, e) => [...acc, e], []),
+                    tap((events) => {
+                        expect([2, 3].includes(events.length)).toBeTruthy()
+                        expect(events.slice(-1)[0].data.rawId).toBe(
+                            window.atob(shell.context.assetId),
+                        )
+                    }),
+                    mapTo(shell),
+                ),
+            ),
+        )
+}
+
 function test_download_asset(assetId: string, basePath: string) {
     class Context {
         public readonly assetId = assetId
@@ -224,19 +255,8 @@ function test_download_asset(assetId: string, basePath: string) {
             sideEffects: (response) => {
                 expect(response).toBeTruthy()
             },
-        }),
-        mergeMap(() => pyYouwol.admin.system.webSocket.downloadEvent$()),
-        takeWhile((event) => {
-            if (event.data.type == 'failed') {
-                throw Error('Failed to download asset')
-            }
-            return event.data && event.data.type != 'succeeded'
-        }, true),
-        reduce((acc, e) => [...acc, e], []),
-        tap((events) => {
-            expect([2, 3].includes(events.length)).toBeTruthy()
-            expect(events.slice(-1)[0].data.rawId).toBe(window.atob(assetId))
-        }),
+        }) as OperatorFunction<Shell<Context>, Shell<Context>>,
+        expectDownloadEvents(),
     )
 }
 
@@ -252,6 +272,81 @@ test('download data', (done) => {
     test_download_asset(remoteDataFileAssetId, 'files-backend/files').subscribe(
         () => done(),
     )
+})
+
+test('download custom asset with files', (done) => {
+    class Context {
+        public readonly assetId = remoteCustomAssetId
+        public readonly zipPath = path.resolve(
+            __dirname,
+            './test-data/test-download-asset-files.zip',
+        )
+    }
+
+    shell$<Context>(new Context())
+        .pipe(
+            // make sure the asset exist and can be retrieved from deployed env
+            getAsset(
+                (shell) => {
+                    return {
+                        assetId: shell.context.assetId,
+                    }
+                },
+                {
+                    sideEffects: (response, shell) => {
+                        expect(response.assetId).toBe(shell.context.assetId)
+                    },
+                },
+            ),
+            expectDownloadEvents(),
+            getAssetZipFiles(
+                (shell: Shell<Context>) => {
+                    return {
+                        assetId: shell.context.assetId,
+                        callerOptions: {
+                            headers: { localOnly: 'true' },
+                        },
+                    }
+                },
+                {
+                    sideEffects: (response, shell) => {
+                        const fileReader = new FileReader()
+                        fileReader.onload = function (event) {
+                            const buffer = event.target.result as ArrayBuffer
+                            writeFileSync(
+                                shell.context.zipPath,
+                                Buffer.from(buffer),
+                            )
+                        }
+                        fileReader.readAsArrayBuffer(response)
+                    },
+                },
+            ),
+            mergeMap((shell) => {
+                const promise = new Promise((resolve) => {
+                    const zipped = new AdmZip(shell.context.zipPath)
+
+                    zipped.readAsTextAsync('topLevelFile.json', (data) => {
+                        expect(JSON.parse(data).summary).toBe(
+                            'a file at the top level',
+                        )
+                    })
+                    zipped.readAsTextAsync(
+                        'innerFolder/innerFile.json',
+                        (data) => {
+                            expect(JSON.parse(data).summary).toBe(
+                                'A file in a folder.',
+                            )
+                            resolve(true)
+                        },
+                    )
+                })
+                return from(promise)
+            }),
+        )
+        .subscribe(() => {
+            done()
+        })
 })
 
 /* eslint-enable jest/no-done-callback -- re-enable */

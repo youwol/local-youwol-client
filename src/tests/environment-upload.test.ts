@@ -24,10 +24,13 @@ import {
     getFileInfo,
     shell$,
     newShell,
+    createAssetWithFiles,
+    getAssetZipFiles,
 } from './shell'
 import { Observable } from 'rxjs'
 import path from 'path'
 import { setup$ } from './local-youwol-test-setup'
+import { NewAssetResponse } from '@youwol/http-clients/src/lib/assets-gateway'
 
 jest.setTimeout(20 * 1000)
 beforeAll(async (done) => {
@@ -251,6 +254,73 @@ test('upload data', (done) => {
                     (shell) => {
                         return {
                             fileId: shell.context.asset.rawId,
+                        }
+                    },
+                    {
+                        sideEffects: (resp) => {
+                            expect(resp).toBeTruthy()
+                        },
+                    },
+                ),
+            }),
+        )
+        .subscribe(() => {
+            done()
+        })
+})
+
+test('upload asset with files', (done) => {
+    class Context implements UploadContext {
+        public readonly asset: NewAssetResponse<Record<string, never>>
+
+        constructor(
+            params: {
+                asset?: AssetsGateway.NewAssetResponse<FilesBackend.UploadResponse>
+            } = {},
+        ) {
+            Object.assign(this, params)
+        }
+    }
+
+    shell$(new Context())
+        .pipe(
+            uploadTest<Context>({
+                createOperator: createAssetWithFiles(
+                    (shell) => {
+                        return {
+                            body: {
+                                kind: 'custom-asset',
+                                rawId: 'upload-asset-with-files',
+                                name: 'Upload asset with files (upload test in local-youwol-client)',
+                                description:
+                                    'A custom asset used to test uploading asset with files',
+                                tags: [
+                                    'integration-test',
+                                    'local-youwol-client',
+                                ],
+                            },
+                            queryParameters: {
+                                folderId: shell.homeFolderId,
+                            },
+                            zipPath: path.resolve(
+                                __dirname,
+                                './yw_config/test-add-files.zip',
+                            ),
+                        }
+                    },
+                    {
+                        newShell: (shell: Shell<Context>, resp) => {
+                            return newShell(shell, resp, (shell, resp) => ({
+                                ...shell.context,
+                                asset: resp,
+                            }))
+                        },
+                    },
+                ),
+                getRawOperator: getAssetZipFiles<Context>(
+                    (shell) => {
+                        return {
+                            assetId: shell.context.asset.assetId,
                         }
                     },
                     {
