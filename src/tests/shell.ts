@@ -228,6 +228,7 @@ export function createAssetWithFiles<TContext>(
 export function getPermissions<TContext>(
     inputs: (shell: Shell<TContext>) => {
         assetId: string
+        callerOptions: CallerRequestOptions
     },
     params?: ShellWrapperOptions<
         Shell<TContext>,
