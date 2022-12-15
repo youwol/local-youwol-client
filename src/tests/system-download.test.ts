@@ -8,7 +8,6 @@ import {
 } from '@youwol/http-primitives'
 
 import {
-    mapTo,
     mergeMap,
     reduce,
     skipWhile,
@@ -25,7 +24,13 @@ import {
     remoteDataFileAssetId,
     remoteFluxAssetId,
 } from './remote_assets_id'
-import { getAsset, getAssetZipFiles, Shell, shell$ } from './shell'
+import {
+    expectDownloadEvents,
+    getAsset,
+    getAssetZipFiles,
+    Shell,
+    shell$,
+} from './shell'
 import { setup$ } from './local-youwol-test-setup'
 import { DownloadEvent } from '../lib/routers/system'
 import {
@@ -201,30 +206,6 @@ test('download flux-builder#latest from app URL', (done) => {
         })
 })
 
-function expectDownloadEvents() {
-    return (observable: Observable<Shell<{ assetId: string }>>) =>
-        observable.pipe(
-            mergeMap((shell) =>
-                pyYouwol.admin.system.webSocket.downloadEvent$().pipe(
-                    takeWhile((event) => {
-                        if (event.data.type == 'failed') {
-                            throw Error('Failed to download asset')
-                        }
-                        return event.data && event.data.type != 'succeeded'
-                    }, true),
-                    reduce((acc, e) => [...acc, e], []),
-                    tap((events) => {
-                        expect([2, 3].includes(events.length)).toBeTruthy()
-                        expect(events.slice(-1)[0].data.rawId).toBe(
-                            window.atob(shell.context.assetId),
-                        )
-                    }),
-                    mapTo(shell),
-                ),
-            ),
-        )
-}
-
 function test_download_asset(assetId: string, basePath: string) {
     class Context {
         public readonly assetId = assetId
@@ -256,7 +237,7 @@ function test_download_asset(assetId: string, basePath: string) {
                 expect(response).toBeTruthy()
             },
         }) as OperatorFunction<Shell<Context>, Shell<Context>>,
-        expectDownloadEvents(),
+        expectDownloadEvents(pyYouwol),
     )
 }
 
@@ -298,7 +279,7 @@ test('download custom asset with files', (done) => {
                     },
                 },
             ),
-            expectDownloadEvents(),
+            expectDownloadEvents(pyYouwol),
             getAssetZipFiles(
                 (shell: Shell<Context>) => {
                     return {

@@ -18,7 +18,7 @@ import {
 } from '@youwol/http-primitives'
 import { readFileSync } from 'fs'
 import { Observable } from 'rxjs'
-import { map, mapTo, mergeMap, tap } from 'rxjs/operators'
+import { map, mapTo, mergeMap, reduce, takeWhile, tap } from 'rxjs/operators'
 
 import { PyYouwolClient } from '../lib'
 import { UploadAssetResponse } from '../lib/routers/environment'
@@ -389,4 +389,28 @@ export function getAssetZipFiles<TContext>(
         },
         ...params,
     })
+}
+
+export function expectDownloadEvents(pyYouwol: PyYouwolClient) {
+    return (observable: Observable<Shell<{ assetId: string }>>) =>
+        observable.pipe(
+            mergeMap((shell) =>
+                pyYouwol.admin.system.webSocket.downloadEvent$().pipe(
+                    takeWhile((event) => {
+                        if (event.data.type == 'failed') {
+                            throw Error('Failed to download asset')
+                        }
+                        return event.data && event.data.type != 'succeeded'
+                    }, true),
+                    reduce((acc, e) => [...acc, e], []),
+                    tap((events) => {
+                        expect([2, 3].includes(events.length)).toBeTruthy()
+                        expect(events.slice(-1)[0].data.rawId).toBe(
+                            window.atob(shell.context.assetId),
+                        )
+                    }),
+                    mapTo(shell),
+                ),
+            ),
+        )
 }
