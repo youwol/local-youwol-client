@@ -84,6 +84,23 @@ async def create_test_data_remote(context: Context):
         await ctx.info(f"selected Host for creation: {host}")
         folder_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home'
         gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        asset_resp = await gtw.get_assets_backend_router().create_asset(
+            body={
+                "rawId": "test-custom-asset",
+                "kind": "custom-asset",
+                "name": "Asset + files (remote test data in local-youwol-client)",
+                "description": "A custom asset used to test posting files and auto-download of assets with files",
+                "tags": ["integration-test", "local-youwol-client"]
+            },
+            params=[('folder-id', folder_id)],
+            headers=ctx.headers()
+        )
+        data = open(Path(__file__).parent / 'test-add-files.zip', 'rb').read()
+        upload_resp = await gtw.get_assets_backend_router().add_zip_files(
+            asset_id=asset_resp["assetId"],
+            data=data,
+            headers=ctx.headers()
+        )
 
         resp_stories = await gtw.get_stories_backend_router().create_story(
             body={
