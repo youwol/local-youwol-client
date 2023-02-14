@@ -93,15 +93,18 @@ test('pyYouwol.admin.system.queryFolderContent', (done) => {
             raiseHTTPErrors(),
             mergeMap((status) => {
                 return pyYouwol.admin.system.queryFolderContent$({
-                    path: path.dirname(status.configuration.pathsBook.config),
+                    // 'path' points to the 'tests' directory
+                    path:
+                        path.dirname(status.configuration.pathsBook.config) +
+                        '/..',
                 })
             }),
             raiseHTTPErrors(),
         )
         .subscribe((resp) => {
             expectAttributes(resp, ['files', 'folders'])
-            expect(resp.files.find((f) => f == 'yw_config.py')).toBeTruthy()
-            expect(resp.folders.find((f) => f == 'databases')).toBeTruthy()
+            expect(resp.files.find((f) => f == 'system.test.ts')).toBeTruthy()
+            expect(resp.folders.find((f) => f == 'test-data')).toBeTruthy()
             done()
         })
 })

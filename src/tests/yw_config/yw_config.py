@@ -67,15 +67,13 @@ async def purge_downloads(context: Context):
 
 
 async def reset(ctx: Context):
-    env = await ctx.get('env', YouwolEnvironment)
+    env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
     env.reset_cache()
+    env.reset_databases()
     parent_folder = env.pathsBook.config.parent
-    shutil.rmtree(parent_folder / "databases", ignore_errors=True)
     shutil.rmtree(parent_folder / "projects", ignore_errors=True)
     shutil.rmtree(parent_folder / "youwol_system", ignore_errors=True)
     os.mkdir(parent_folder / "projects")
-    shutil.copytree(src=parent_folder / "empty_databases",
-                    dst=parent_folder / "databases")
     await ProjectLoader.initialize(env=env)
 
 
