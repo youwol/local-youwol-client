@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 from pathlib import Path
+from typing import cast, List
 
 import brotli
 from starlette.middleware.base import RequestResponseEndpoint
@@ -10,8 +11,10 @@ from starlette.requests import Request
 from starlette.responses import Response
 from youwol.main_args import MainArguments
 from youwol.routers.projects import ProjectLoader
+from youwol.routers.system.router import Log, NodeLogResponse, LeafLogResponse
 
-from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label
+from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label, InMemoryReporter, write_json, \
+    ContextFactory
 
 from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, DirectAuth, \
     LocalEnvironment, CustomMiddleware, FlowSwitcherMiddleware, CdnSwitch, \
@@ -194,6 +197,10 @@ class BrotliDecompressMiddleware(CustomMiddleware):
             return resp
 
 
+path_test_ctx = Path(__file__).parent / 'jest-current-test-context.json'
+write_json({"testName": "", "file": ""}, path_test_ctx)
+ContextFactory.with_static_labels = lambda: parse_json(path_test_ctx).values()
+
 pipeline_ts.set_environment()
 
 
@@ -210,6 +217,23 @@ prod_env = CloudEnvironment(
     authProvider=get_standard_auth_provider("platform.youwol.com"),
     authentications=direct_auths
 )
+
+
+def retrieve_logs(body, context: Context):
+    logger = cast(InMemoryReporter, context.logs_reporters[0])
+    root_logs, nodes_logs, leaf_logs, errors = logger.root_node_logs, logger.node_logs, logger.leaf_logs, logger.errors
+
+    test_name = body["testName"]
+    file_name = body["file"]
+    nodes: List[Log] = [NodeLogResponse(**Log.from_log_entry(log).dict(), failed=log.context_id in errors)
+                        for log in root_logs + nodes_logs
+                        if test_name in log.labels and file_name in log.labels]
+    leafs: List[Log] = [LeafLogResponse(**Log.from_log_entry(log).dict())
+                        for log in leaf_logs
+                        if test_name in log.labels and file_name in log.labels]
+
+    return {"nodes": sorted(nodes, key=lambda n: n.timestamp),
+            "leafs": sorted(leafs, key=lambda n: n.timestamp)}
 
 
 async def test_command_post(body, context: Context):
@@ -280,6 +304,10 @@ class ConfigurationFactory(IConfigurationFactory):
                             name="test-cmd-delete",
                             do_delete=lambda ctx: {"status": "deleted"}
                         ),
+                        Command(
+                            name="get-logs",
+                            do_post=lambda body, ctx: retrieve_logs(body, ctx)
+                        )
                     ]
                 )
             )
