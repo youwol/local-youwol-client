@@ -39,6 +39,24 @@ export interface DownloadEvent {
 
 export type ClearLogsResponse = Record<string, never>
 
+export interface Log {
+    level: 'INFO' | 'WARNING' | 'ERROR'
+    attributes: { [k: string]: string }
+    labels: string[]
+    text: string
+    data?: { [k: string]: unknown }
+    contextId: string
+    parentContextId: string
+    timestamp: number
+}
+
+export interface AddLogBody extends Log {
+    traceUid: string
+}
+export interface AddLogsBody {
+    logs: AddLogBody[]
+}
+
 class WebSocketAPI {
     constructor(public readonly ws: WsRouter) {}
 
@@ -140,6 +158,24 @@ export class SystemRouter extends Router {
         return this.send$({
             command: 'delete',
             path: `/logs`,
+            callerOptions,
+        })
+    }
+
+    addLogs$({
+        body,
+        callerOptions,
+    }: {
+        body: AddLogsBody
+        callerOptions?: CallerRequestOptions
+    }): HTTPResponse$<Record<never, unknown>> {
+        return this.send$({
+            command: 'update',
+            path: `/logs`,
+            nativeRequestOptions: {
+                method: 'POST',
+                json: body,
+            },
             callerOptions,
         })
     }
