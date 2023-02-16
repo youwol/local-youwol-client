@@ -24,6 +24,8 @@ import { PyYouwolClient } from '../lib'
 import { UploadAssetResponse } from '../lib/routers/environment'
 import { CreateAssetBody } from '@youwol/http-clients/src/lib/assets-backend/interfaces'
 import { NewAssetResponse } from '@youwol/http-clients/src/lib/assets-gateway'
+import * as fs from 'fs'
+import { randomUUID } from 'crypto'
 
 export class Shell<T> extends ShellBase<T> {
     public readonly assetsGtw: AssetsGateway.Client
@@ -34,7 +36,9 @@ export class Shell<T> extends ShellBase<T> {
 
 export function shell$<T>(context?: T) {
     const assetsGtw = new AssetsGateway.Client()
-    return assetsGtw.explorer.getDefaultUserDrive$().pipe(
+    return of(undefined).pipe(
+        addBookmarkLog({ text: "Shell's construction started" }),
+        mergeMap(() => assetsGtw.explorer.getDefaultUserDrive$()),
         raiseHTTPErrors(),
         map((resp: ExplorerBackend.GetDefaultDriveResponse) => {
             expect(resp.driveName).toBe('Default drive')
@@ -46,6 +50,7 @@ export function shell$<T>(context?: T) {
                 context,
             })
         }),
+        addBookmarkLog({ text: "Shell's construction done" }),
     )
 }
 
@@ -414,4 +419,75 @@ export function expectDownloadEvents(pyYouwol: PyYouwolClient) {
                 ),
             ),
         )
+}
+
+export function applyTestCtxLabels() {
+    const testName = jasmine['currentTest'].fullName
+    const file = jasmine['currentTest'].testPath.split(
+        '@youwol/local-youwol-client/',
+    )[1]
+    fs.writeFileSync(
+        './src/tests/yw_config/jest-current-test-context.json',
+        JSON.stringify({
+            testName,
+            file,
+        }),
+    )
+}
+
+export function resetTestCtxLabels() {
+    fs.writeFileSync(
+        './src/tests/yw_config/jest-current-test-context.json',
+        JSON.stringify({
+            testName: '',
+            file: '',
+        }),
+    )
+}
+
+export function addBookmarkLog<T>({
+    text,
+    data,
+}: {
+    text: string | ((d: T) => string)
+    data?: (d: T) => { [_k: string]: unknown }
+}) {
+    const testName = jasmine['currentTest'].fullName
+    const file = jasmine['currentTest'].testPath.split(
+        '@youwol/local-youwol-client/',
+    )[1]
+    return (source$: Observable<T>) => {
+        return source$.pipe(
+            mergeMap((d) => {
+                return new PyYouwolClient().admin.system
+                    .addLogs$({
+                        body: {
+                            logs: [
+                                {
+                                    traceUid: randomUUID(),
+                                    level: 'INFO',
+                                    attributes: {},
+                                    labels: [
+                                        testName,
+                                        file,
+                                        'Label.BOOKMARK',
+                                        'Label.LOG_INFO',
+                                        'Label.STARTED',
+                                    ],
+                                    text:
+                                        typeof text == 'string'
+                                            ? `${testName}: ${text}`
+                                            : `${testName}: ${text(d)}`,
+                                    data: data ? data(d) : {},
+                                    contextId: randomUUID(),
+                                    parentContextId: 'root',
+                                    timestamp: Date.now() * 1e3,
+                                },
+                            ],
+                        },
+                    })
+                    .pipe(map(() => d))
+            }),
+        )
+    }
 }
