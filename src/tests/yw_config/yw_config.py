@@ -44,10 +44,7 @@ async def clone_project(git_url: str, new_project_name: str, ctx: Context):
 async def purge_downloads(context: Context):
     async with context.start(action="purge_downloads", muted_http_errors={404}) as ctx:  # type: Context
         env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
-        assets_gtw = await RemoteClients.get_assets_gateway_client(
-            remote_host=env.get_remote_info().host,
-            context=ctx
-        )
+        assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=env.get_remote_info().host)
         headers = ctx.headers()
         default_drive = await LocalClients \
             .get_assets_gateway_client(env)\
@@ -83,7 +80,7 @@ async def create_test_data_remote(context: Context):
         host = env.get_remote_info().host
         await ctx.info(f"selected Host for creation: {host}")
         folder_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home'
-        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host)
         asset_resp = await gtw.get_assets_backend_router().create_asset(
             body={
                 "rawId": "test-custom-asset",
@@ -154,7 +151,7 @@ async def erase_all_test_data_remote(context: Context):
         await ctx.info(f"selected Host for deletion: {host}")
         drive_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive'
         folder_id = f'{drive_id}_home'
-        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host)
         resp = await gtw.get_treedb_backend_router().get_children(folder_id=folder_id, headers=ctx.headers())
         await asyncio.gather(*[
             gtw.get_treedb_backend_router().remove_item(item_id=item['itemId'], headers=ctx.headers())
