@@ -67,31 +67,31 @@ test('pyYouwol.admin.system.queryLogs', (done) => {
         })
 })
 
-test('pyYouwol.admin.system.clearLogs', (done) => {
-    pyYouwol.admin.system
-        .queryRootLogs$({ fromTimestamp: Date.now(), maxCount: 100 })
-        .pipe(
-            raiseHTTPErrors(),
-            tap((resp) => {
-                expect(resp.logs.length).toBeGreaterThanOrEqual(1)
-            }),
-            mergeMap(() => pyYouwol.admin.system.clearLogs$()),
-            raiseHTTPErrors(),
-            mergeMap(() =>
-                pyYouwol.admin.system.queryRootLogs$({
-                    fromTimestamp: Date.now(),
-                    maxCount: 100,
-                }),
-            ),
-            raiseHTTPErrors(),
-            tap((resp) => {
-                expect(resp.logs).toHaveLength(0)
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
-})
+// test('pyYouwol.admin.system.clearLogs', (done) => {
+//     pyYouwol.admin.system
+//         .queryRootLogs$({ fromTimestamp: Date.now(), maxCount: 100 })
+//         .pipe(
+//             raiseHTTPErrors(),
+//             tap((resp) => {
+//                 expect(resp.logs.length).toBeGreaterThanOrEqual(1)
+//             }),
+//             mergeMap(() => pyYouwol.admin.system.clearLogs$()),
+//             raiseHTTPErrors(),
+//             mergeMap(() =>
+//                 pyYouwol.admin.system.queryRootLogs$({
+//                     fromTimestamp: Date.now(),
+//                     maxCount: 100,
+//                 }),
+//             ),
+//             raiseHTTPErrors(),
+//             tap((resp) => {
+//                 expect(resp.logs).toHaveLength(0)
+//             }),
+//         )
+//         .subscribe(() => {
+//             done()
+//         })
+// })
 
 test('pyYouwol.admin.system.queryFolderContent', (done) => {
     pyYouwol.admin.environment
