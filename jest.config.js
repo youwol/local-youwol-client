@@ -9,4 +9,5 @@ module.exports = {
     },
     reporters: ['default', 'jest-junit'],
     modulePathIgnorePatterns: ['/dist', '/src/tests/yw_config', '.template'],
+    setupFilesAfterEnv: ['./jest.setup.js'],
 }
