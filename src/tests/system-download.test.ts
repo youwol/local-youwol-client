@@ -25,9 +25,12 @@ import {
     remoteFluxAssetId,
 } from './remote_assets_id'
 import {
+    addBookmarkLog,
+    applyTestCtxLabels,
     expectDownloadEvents,
     getAsset,
     getAssetZipFiles,
+    resetTestCtxLabels,
     Shell,
     shell$,
 } from './shell'
@@ -46,13 +49,28 @@ const pyYouwol = new PyYouwolClient()
 jest.setTimeout(20 * 1000)
 
 beforeEach(async (done) => {
-    setup$({
-        localOnly: false,
-        email: 'int_tests_yw-users@test-user',
-    }).subscribe(() => {
-        done()
-    })
+    of(undefined)
+        .pipe(
+            addBookmarkLog({
+                text: `BeforeEach started`,
+            }),
+            mergeMap(() => {
+                return setup$({
+                    localOnly: false,
+                    email: 'int_tests_yw-users@test-user',
+                })
+            }),
+            tap(() => applyTestCtxLabels()),
+            addBookmarkLog({
+                text: `BeforeEach done`,
+            }),
+        )
+        .subscribe(() => {
+            done()
+        })
 })
+
+afterEach(() => resetTestCtxLabels())
 
 function testInstall(
     modules: string[],
@@ -212,7 +230,10 @@ function test_download_asset(assetId: string, basePath: string) {
     }
 
     return shell$<Context>(new Context()).pipe(
-        // make sure the asset exist and can be retrieved from deployed env
+        addBookmarkLog({ text: `Start` }),
+        addBookmarkLog({
+            text: `GET asset to trigger download`,
+        }),
         getAsset(
             (shell) => {
                 return {
@@ -225,6 +246,9 @@ function test_download_asset(assetId: string, basePath: string) {
                 },
             },
         ),
+        addBookmarkLog({
+            text: `Make sure the asset has been downloaded locally`,
+        }),
         send<string, Context>({
             inputs: (shell) => {
                 const rawId = window.atob(shell.context.assetId)
@@ -237,6 +261,7 @@ function test_download_asset(assetId: string, basePath: string) {
                 expect(response).toBeTruthy()
             },
         }) as OperatorFunction<Shell<Context>, Shell<Context>>,
+        addBookmarkLog({ text: `Wait for expected download events` }),
         expectDownloadEvents(pyYouwol),
     )
 }

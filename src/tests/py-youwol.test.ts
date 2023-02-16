@@ -2,6 +2,8 @@
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
+import { tap } from 'rxjs/operators'
+import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -9,10 +11,14 @@ beforeEach(async (done) => {
     setup$({
         localOnly: true,
         email: 'int_tests_yw-users@test-user',
-    }).subscribe(() => {
-        done()
     })
+        .pipe(tap(() => applyTestCtxLabels()))
+        .subscribe(() => {
+            done()
+        })
 })
+
+afterEach(() => resetTestCtxLabels())
 
 test('query healthz', (done) => {
     pyYouwol

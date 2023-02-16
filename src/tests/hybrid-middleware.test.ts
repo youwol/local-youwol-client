@@ -2,14 +2,17 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
 import { remoteStoryAssetId } from './remote_assets_id'
 import {
+    applyTestCtxLabels,
     expectDownloadEvents,
     getAsset,
     getPermissions,
+    resetTestCtxLabels,
     Shell,
     shell$,
 } from './shell'
 import { setup$ } from './local-youwol-test-setup'
 import { PyYouwolClient } from '../lib'
+import { tap } from 'rxjs/operators'
 
 jest.setTimeout(20 * 1000)
 
@@ -19,10 +22,14 @@ beforeEach((done) => {
     setup$({
         localOnly: false,
         email: 'int_tests_yw-users@test-user',
-    }).subscribe(() => {
-        done()
     })
+        .pipe(tap(() => applyTestCtxLabels()))
+        .subscribe(() => {
+            done()
+        })
 })
+
+afterEach(() => resetTestCtxLabels())
 
 test('can retrieve asset info when remote only', (done) => {
     class Context {

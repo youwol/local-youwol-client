@@ -17,7 +17,7 @@ import {
     wrap,
 } from '@youwol/http-primitives'
 import { readFileSync } from 'fs'
-import { Observable } from 'rxjs'
+import { Observable, of } from 'rxjs'
 import { map, mapTo, mergeMap, reduce, takeWhile, tap } from 'rxjs/operators'
 
 import { PyYouwolClient } from '../lib'
@@ -402,6 +402,14 @@ export function expectDownloadEvents(pyYouwol: PyYouwolClient) {
         observable.pipe(
             mergeMap((shell) =>
                 pyYouwol.admin.system.webSocket.downloadEvent$().pipe(
+                    addBookmarkLog({
+                        text: (event) =>
+                            `Received event ${event.data.type} for ${event.data.rawId}`,
+                        data: (event) => ({
+                            type: event.data.type,
+                            rawId: event.data.rawId,
+                        }),
+                    }),
                     takeWhile((event) => {
                         if (event.data.type == 'failed') {
                             throw Error('Failed to download asset')

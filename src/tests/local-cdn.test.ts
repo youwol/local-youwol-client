@@ -8,6 +8,7 @@ import { mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 import { expectDownloadEvents$, expectUpdateStatus } from './utils'
 import { setup$ } from './local-youwol-test-setup'
+import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -17,10 +18,14 @@ beforeEach(async (done) => {
     setup$({
         localOnly: true,
         email: 'int_tests_yw-users@test-user',
-    }).subscribe(() => {
-        done()
     })
+        .pipe(tap(() => applyTestCtxLabels()))
+        .subscribe(() => {
+            done()
+        })
 })
+
+afterEach(() => resetTestCtxLabels())
 
 test('pyYouwol.admin.local-cdn.status', (done) => {
     combineLatest([

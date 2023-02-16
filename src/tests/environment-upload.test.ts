@@ -26,6 +26,8 @@ import {
     newShell,
     createAssetWithFiles,
     getAssetZipFiles,
+    applyTestCtxLabels,
+    resetTestCtxLabels,
 } from './shell'
 import { Observable } from 'rxjs'
 import path from 'path'
@@ -41,6 +43,12 @@ beforeAll(async (done) => {
         done()
     })
 })
+
+beforeEach(() => {
+    applyTestCtxLabels()
+})
+
+afterEach(() => resetTestCtxLabels())
 
 interface UploadContext {
     asset: AssetsGateway.NewAssetResponse<unknown>

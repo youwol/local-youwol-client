@@ -6,6 +6,7 @@ import { mergeMap, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
 import { expectEnvironment } from './utils'
+import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -17,6 +18,12 @@ beforeAll(async (done) => {
         done()
     })
 })
+
+beforeEach(() => {
+    applyTestCtxLabels()
+})
+
+afterEach(() => resetTestCtxLabels())
 
 test('pyYouwol.admin.environment.login', (done) => {
     pyYouwol.admin.environment
