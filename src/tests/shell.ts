@@ -522,3 +522,41 @@ export function addBookmarkLog<T>({
         )
     }
 }
+
+export function testSetup$() {
+    return of(undefined).pipe(
+        applyTestCtxLabels(),
+        addBookmarkLog({
+            text: `beforeEach started`,
+        }),
+        mergeMap(() => {
+            return ywSetup$({
+                localOnly: false,
+                email: 'int_tests_yw-users@test-user',
+            })
+        }),
+        applyTestCtxLabels(),
+        addBookmarkLog({
+            text: `beforeEach done`,
+        }),
+    )
+}
+
+export function testTearDown$(shell: Shell<unknown>) {
+    if (!shell) {
+        return of(undefined)
+    }
+    return of(shell).pipe(
+        addBookmarkLog({
+            text: `afterEach started, tear down shell`,
+            data: (s) => ({ subscriptions: Object.keys(s.subscriptions) }),
+        }),
+        tap((shell) => {
+            shell.tearDown()
+        }),
+        addBookmarkLog({
+            text: `afterEach done`,
+        }),
+        resetTestCtxLabels(),
+    )
+}
