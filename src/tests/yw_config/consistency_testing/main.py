@@ -3,18 +3,19 @@
 # Following environment variables are required:
 # USERNAME_INTEGRATION_TESTS PASSWORD_INTEGRATION_TESTS USERNAME_INTEGRATION_TESTS_BIS PASSWORD_INTEGRATION_TESTS_BIS
 #
-# The code in './test_utils' are meant to be factorized at some point, likely in youwol_utils.
-#
 import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, cast, List
 
+import aiohttp
 from colorama import Fore, Style
 
+from youwol.pipelines.pipeline_typescript_weback_npm import yarn_errors_formatter
+from youwol.routers.system.router import Log, NodeLogResponse, LeafLogResponse
 from youwol_utils import execute_shell_cmd, ContextReporter, LogEntry, Context
-from .test_utils import TestSession, py_youwol_session, yarn_errors_formatter, Publication
+from youwol_utils.utils_test import TestSession, Publication, py_youwol_session, PyYouwolSession
 
 
 class Reporter(ContextReporter):
@@ -43,6 +44,18 @@ class Counter(NamedTuple):
         return f"Current status: {Fore.GREEN}{self.OK} OK, {Fore.RED}{self.KO} KO{Style.RESET_ALL}"
 
 
+async def get_logs(session: PyYouwolSession, file: str, test: str):
+    http_port = session.configuration.system.httpPort
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url=f"http://localhost:{http_port}/admin/custom-commands/get-logs",
+                                json={"file": file, "testName": test}) as resp:
+            json_resp = await resp.json()
+            nodes = cast(List[Log], [NodeLogResponse(**node) for node in json_resp['nodes']])
+            leafs = cast(List[Log], [LeafLogResponse(**leaf) for leaf in json_resp['leafs']])
+            return list(sorted(nodes+leafs, key=lambda n: n.timestamp))
+
+
 async def execute():
 
     count = 100
@@ -68,7 +81,8 @@ async def execute():
                     cmd="(cd ../.. & yarn test )",
                     context=context
                 ),
-                errors_formatter=yarn_errors_formatter
+                errors_formatter=yarn_errors_formatter,
+                py_yw_logs_getter=get_logs
             )
             counter = counter.with_ok() if return_code == 0 else counter.with_ko()
             print(counter)
