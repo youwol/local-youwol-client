@@ -314,6 +314,34 @@ export function purgeDrive<TContext>(
     })
 }
 
+export function resetCdn<TContext>(
+    params?: ShellWrapperOptions<Shell<TContext>, ResetCdnResponse>,
+) {
+    return wrap<Shell<TContext>, ResetCdnResponse>({
+        observable: (shell: Shell<TContext>) =>
+            shell.pyYouwol.admin.localCdn.resetCdn$(),
+        ...params,
+        sideEffects: (resp: ResetCdnResponse) => {
+            expectAttributes(resp, ['deletedPackages'])
+            params.sideEffects && params.sideEffects(resp)
+        },
+    })
+}
+
+export function getCdnStatus<TContext>(
+    params?: ShellWrapperOptions<Shell<TContext>, GetCdnStatusResponse>,
+) {
+    return wrap<Shell<TContext>, GetCdnStatusResponse>({
+        observable: (shell: Shell<TContext>) =>
+            shell.pyYouwol.admin.localCdn.getStatus$(),
+        ...params,
+        sideEffects: (resp: GetCdnStatusResponse) => {
+            expectAttributes(resp, ['packages'])
+            params.sideEffects && params.sideEffects(resp)
+        },
+    })
+}
+
 type NewFluxProject =
     AssetsGateway.NewAssetResponse<FluxBackend.NewProjectResponse>
 
