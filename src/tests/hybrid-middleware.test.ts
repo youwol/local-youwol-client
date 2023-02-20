@@ -12,7 +12,9 @@ import {
 } from './shell'
 import { setup$ } from './local-youwol-test-setup'
 import { PyYouwolClient } from '../lib'
-import { tap } from 'rxjs/operators'
+import { take, tap } from 'rxjs/operators'
+import { ReplaySubject } from 'rxjs'
+import { DownloadEvent } from '../lib/routers/system'
 
 jest.setTimeout(20 * 1000)
 
@@ -36,6 +38,13 @@ test('can retrieve asset info when remote only', (done) => {
         // the creation of the test data is gathered in the youwol-config.py
         public readonly assetId = remoteStoryAssetId
     }
+    const downloadEvents$ = new ReplaySubject<{ data: DownloadEvent }>()
+    pyYouwol.admin.system.webSocket
+        .downloadEvent$()
+        .pipe(take(3))
+        .subscribe((d) => {
+            downloadEvents$.next(d)
+        })
 
     shell$<Context>(new Context())
         .pipe(
@@ -51,7 +60,7 @@ test('can retrieve asset info when remote only', (done) => {
                     },
                 },
             ),
-            expectDownloadEvents(pyYouwol),
+            expectDownloadEvents(remoteStoryAssetId, downloadEvents$),
             getPermissions(
                 (shell) => {
                     return {
