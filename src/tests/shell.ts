@@ -17,15 +17,20 @@ import {
     wrap,
 } from '@youwol/http-primitives'
 import { readFileSync } from 'fs'
-import { Observable, of } from 'rxjs'
-import { map, mapTo, mergeMap, reduce, takeWhile, tap } from 'rxjs/operators'
+import { Observable, of, Subscription, timer } from 'rxjs'
+import { filter, map, mapTo, mergeMap, reduce, take, tap } from 'rxjs/operators'
 
 import { PyYouwolClient } from '../lib'
 import { UploadAssetResponse } from '../lib/routers/environment'
 import { CreateAssetBody } from '@youwol/http-clients/src/lib/assets-backend/interfaces'
 import { NewAssetResponse } from '@youwol/http-clients/src/lib/assets-gateway'
-import * as fs from 'fs'
 import { randomUUID } from 'crypto'
+import { DownloadEvent } from '../lib/routers/system'
+import { setup$ as ywSetup$ } from './local-youwol-test-setup'
+import {
+    GetCdnStatusResponse,
+    ResetCdnResponse,
+} from '../lib/routers/local-cdn'
 
 export class Shell<T> extends ShellBase<T> {
     public readonly pyYouwol = new PyYouwolClient()
@@ -410,11 +415,28 @@ export function getAssetZipFiles<TContext>(
     })
 }
 
-export function expectDownloadEvents(pyYouwol: PyYouwolClient) {
-    return (observable: Observable<Shell<{ assetId: string }>>) =>
-        observable.pipe(
-            mergeMap((shell) =>
-                pyYouwol.admin.system.webSocket.downloadEvent$().pipe(
+export function expectDownloadEvents<TContext>(
+    assetId: string,
+    downloadEvents$: Observable<{ data: DownloadEvent }>,
+    expectedStatus: 'succeeded' | 'failed' = 'succeeded',
+) {
+    const keyTick$ = 'tick$'
+    const rawId = window.atob(assetId)
+    return (observable: Observable<Shell<TContext>>) => {
+        return observable.pipe(
+            tap((shell) => {
+                shell.addSubscription(
+                    keyTick$,
+                    timer(0, 500)
+                        .pipe(addBookmarkLog({ text: (c) => `tick ${c}` }))
+                        .subscribe(),
+                )
+            }),
+            mergeMap((shell) => {
+                return downloadEvents$.pipe(
+                    filter((event) => {
+                        return event.data.rawId == rawId
+                    }),
                     addBookmarkLog({
                         text: (event) =>
                             `Received event ${event.data.type} for ${event.data.rawId}`,
@@ -423,23 +445,23 @@ export function expectDownloadEvents(pyYouwol: PyYouwolClient) {
                             rawId: event.data.rawId,
                         }),
                     }),
-                    takeWhile((event) => {
-                        if (event.data.type == 'failed') {
-                            throw Error('Failed to download asset')
-                        }
-                        return event.data && event.data.type != 'succeeded'
-                    }, true),
-                    reduce((acc, e) => [...acc, e], []),
+                    take(3),
+                    reduce((acc, e) => [...acc, e.data.type], []),
                     tap((events) => {
-                        expect([2, 3].includes(events.length)).toBeTruthy()
-                        expect(events.slice(-1)[0].data.rawId).toBe(
-                            window.atob(shell.context.assetId),
-                        )
+                        expect(events).toEqual([
+                            'enqueued',
+                            'started',
+                            expectedStatus,
+                        ])
                     }),
                     mapTo(shell),
-                ),
-            ),
+                    tap((shell) => {
+                        shell.unsubscribe(keyTick$)
+                    }),
+                )
+            }),
         )
+    }
 }
 
 export function applyTestCtxLabels<T>() {
