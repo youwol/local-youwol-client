@@ -13,7 +13,7 @@ from youwol.main_args import MainArguments
 from youwol.routers.projects import ProjectLoader
 from youwol.routers.system.router import Log, NodeLogResponse, LeafLogResponse
 
-from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label, InMemoryReporter, write_json, \
+from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label, InMemoryReporter, \
     ContextFactory
 
 from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, DirectAuth, \
@@ -197,10 +197,6 @@ class BrotliDecompressMiddleware(CustomMiddleware):
             return resp
 
 
-path_test_ctx = Path(__file__).parent / 'jest-current-test-context.json'
-write_json({"testName": "", "file": ""}, path_test_ctx)
-ContextFactory.with_static_labels = lambda: parse_json(path_test_ctx).values()
-
 pipeline_ts.set_environment()
 
 
@@ -217,6 +213,14 @@ prod_env = CloudEnvironment(
     authProvider=get_standard_auth_provider("platform.youwol.com"),
     authentications=direct_auths
 )
+
+
+def apply_test_labels_logs(body):
+    ContextFactory.add_labels(
+        key="labels@local-yw-clients-tests",
+        labels={body['file'], body['testName']}
+    )
+    return {}
 
 
 def retrieve_logs(body, context: Context):
@@ -307,6 +311,10 @@ class ConfigurationFactory(IConfigurationFactory):
                         Command(
                             name="get-logs",
                             do_post=lambda body, ctx: retrieve_logs(body, ctx)
+                        ),
+                        Command(
+                            name="set-jest-context",
+                            do_post=lambda body, ctx: apply_test_labels_logs(body)
                         )
                     ]
                 )

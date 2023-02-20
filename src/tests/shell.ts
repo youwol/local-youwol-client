@@ -429,28 +429,38 @@ export function expectDownloadEvents(pyYouwol: PyYouwolClient) {
         )
 }
 
-export function applyTestCtxLabels() {
+export function applyTestCtxLabels<T>() {
     const testName = jasmine['currentTest'].fullName
     const file = jasmine['currentTest'].testPath.split(
         '@youwol/local-youwol-client/',
     )[1]
-    fs.writeFileSync(
-        './src/tests/yw_config/jest-current-test-context.json',
-        JSON.stringify({
-            testName,
-            file,
-        }),
-    )
+    return (source$: Observable<T>) => {
+        return source$.pipe(
+            mergeMap(() => {
+                return new PyYouwolClient().admin.customCommands
+                    .doPost$({
+                        name: 'set-jest-context',
+                        body: { file, testName },
+                    })
+                    .pipe(raiseHTTPErrors())
+            }),
+        )
+    }
 }
 
-export function resetTestCtxLabels() {
-    fs.writeFileSync(
-        './src/tests/yw_config/jest-current-test-context.json',
-        JSON.stringify({
-            testName: '',
-            file: '',
-        }),
-    )
+export function resetTestCtxLabels<T>() {
+    return (source$: Observable<T>) => {
+        return source$.pipe(
+            mergeMap(() => {
+                return new PyYouwolClient().admin.customCommands
+                    .doPost$({
+                        name: 'set-jest-context',
+                        body: { file: '', testName: '' },
+                    })
+                    .pipe(raiseHTTPErrors())
+            }),
+        )
+    }
 }
 
 export function addBookmarkLog<T>({
