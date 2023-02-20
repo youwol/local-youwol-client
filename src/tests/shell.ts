@@ -28,10 +28,23 @@ import * as fs from 'fs'
 import { randomUUID } from 'crypto'
 
 export class Shell<T> extends ShellBase<T> {
+    public readonly pyYouwol = new PyYouwolClient()
     public readonly assetsGtw: AssetsGateway.Client
     public readonly homeFolderId: string
     public readonly defaultDriveId: string
     public readonly privateGroupId: string
+    public readonly subscriptions: { [_k: string]: Subscription } = {}
+
+    addSubscription(key: string, sub: Subscription) {
+        this.subscriptions[key] = sub
+    }
+    unsubscribe(key: string) {
+        this.subscriptions[key].unsubscribe()
+        delete this.subscriptions[key]
+    }
+    tearDown() {
+        Object.values(this.subscriptions).forEach((s) => s.unsubscribe())
+    }
 }
 
 export function shell$<T>(context?: T) {
