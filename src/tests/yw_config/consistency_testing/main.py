@@ -7,10 +7,9 @@ import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import NamedTuple, cast, List
+from typing import cast, List
 
 import aiohttp
-from colorama import Fore, Style
 
 from youwol.pipelines.pipeline_typescript_weback_npm import yarn_errors_formatter
 from youwol.routers.system.router import Log, NodeLogResponse, LeafLogResponse
@@ -28,20 +27,6 @@ context = Context(
     logs_reporters=[Reporter()],
     data_reporters=[]
 )
-
-
-class Counter(NamedTuple):
-    OK: int = 0
-    KO: int = 0
-
-    def with_ok(self):
-        return Counter(OK=self.OK+1, KO=self.KO)
-
-    def with_ko(self):
-        return Counter(OK=self.OK, KO=self.KO+1)
-
-    def __str__(self):
-        return f"Current status: {Fore.GREEN}{self.OK} OK, {Fore.RED}{self.KO} KO{Style.RESET_ALL}"
 
 
 async def get_logs(session: PyYouwolSession, file: str, test: str):
@@ -68,13 +53,10 @@ async def execute():
             client_secret=os.getenv("PASSWORD_INTEGRATION_TESTS")
         )
     )
-    counter = Counter()
-
-    for i in range(count):
-        print(f"Running {i}/{count}")
+    for _ in range(count):
         async with py_youwol_session(config_path='./yw_config.py') as py_yw_session:
 
-            return_code, output = await consistency_testing.execute(
+            await consistency_testing.execute(
                 py_yw_session=py_yw_session,
                 title="yarn test",
                 action=lambda: execute_shell_cmd(
@@ -84,7 +66,5 @@ async def execute():
                 errors_formatter=yarn_errors_formatter,
                 py_yw_logs_getter=get_logs
             )
-            counter = counter.with_ok() if return_code == 0 else counter.with_ko()
-            print(counter)
 
 asyncio.run(execute())
