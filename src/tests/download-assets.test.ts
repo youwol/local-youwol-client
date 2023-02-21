@@ -134,14 +134,7 @@ test('download data', (done) => {
         assetId,
         getTestPath,
         context: new Context(),
-    })
-        .pipe(
-            // tap(() => {
-            //     expect(true).toBeFalsy()
-            // }),
-            addBookmarkLog({ text: `Done` }),
-        )
-        .subscribe(() => done())
+    }).subscribe(() => done())
 })
 
 test('download custom asset with files', (done) => {
