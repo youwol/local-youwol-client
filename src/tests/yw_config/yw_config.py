@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 from pathlib import Path
+from typing import cast, List
 
 import brotli
 from starlette.middleware.base import RequestResponseEndpoint
@@ -10,8 +11,10 @@ from starlette.requests import Request
 from starlette.responses import Response
 from youwol.main_args import MainArguments
 from youwol.routers.projects import ProjectLoader
+from youwol.routers.system.router import Log, NodeLogResponse, LeafLogResponse
 
-from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label
+from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label, InMemoryReporter, \
+    ContextFactory
 
 from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, DirectAuth, \
     LocalEnvironment, CustomMiddleware, FlowSwitcherMiddleware, CdnSwitch, \
@@ -44,10 +47,7 @@ async def clone_project(git_url: str, new_project_name: str, ctx: Context):
 async def purge_downloads(context: Context):
     async with context.start(action="purge_downloads", muted_http_errors={404}) as ctx:  # type: Context
         env: YouwolEnvironment = await ctx.get('env', YouwolEnvironment)
-        assets_gtw = await RemoteClients.get_assets_gateway_client(
-            remote_host=env.get_remote_info().host,
-            context=ctx
-        )
+        assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=env.get_remote_info().host)
         headers = ctx.headers()
         default_drive = await LocalClients \
             .get_assets_gateway_client(env)\
@@ -83,7 +83,7 @@ async def create_test_data_remote(context: Context):
         host = env.get_remote_info().host
         await ctx.info(f"selected Host for creation: {host}")
         folder_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive_home'
-        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host)
         asset_resp = await gtw.get_assets_backend_router().create_asset(
             body={
                 "rawId": "test-custom-asset",
@@ -154,7 +154,7 @@ async def erase_all_test_data_remote(context: Context):
         await ctx.info(f"selected Host for deletion: {host}")
         drive_id = 'private_51c42384-3582-494f-8c56-7405b01646ad_default-drive'
         folder_id = f'{drive_id}_home'
-        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host, context=ctx)
+        gtw = await RemoteClients.get_assets_gateway_client(remote_host=host)
         resp = await gtw.get_treedb_backend_router().get_children(folder_id=folder_id, headers=ctx.headers())
         await asyncio.gather(*[
             gtw.get_treedb_backend_router().remove_item(item_id=item['itemId'], headers=ctx.headers())
@@ -213,6 +213,31 @@ prod_env = CloudEnvironment(
     authProvider=get_standard_auth_provider("platform.youwol.com"),
     authentications=direct_auths
 )
+
+
+def apply_test_labels_logs(body):
+    ContextFactory.add_labels(
+        key="labels@local-yw-clients-tests",
+        labels={body['file'], body['testName']}
+    )
+    return {}
+
+
+def retrieve_logs(body, context: Context):
+    logger = cast(InMemoryReporter, context.logs_reporters[0])
+    root_logs, nodes_logs, leaf_logs, errors = logger.root_node_logs, logger.node_logs, logger.leaf_logs, logger.errors
+
+    test_name = body["testName"]
+    file_name = body["file"]
+    nodes: List[Log] = [NodeLogResponse(**Log.from_log_entry(log).dict(), failed=log.context_id in errors)
+                        for log in root_logs + nodes_logs
+                        if test_name in log.labels and file_name in log.labels]
+    leafs: List[Log] = [LeafLogResponse(**Log.from_log_entry(log).dict())
+                        for log in leaf_logs
+                        if test_name in log.labels and file_name in log.labels]
+
+    return {"nodes": sorted(nodes, key=lambda n: n.timestamp),
+            "leafs": sorted(leafs, key=lambda n: n.timestamp)}
 
 
 async def test_command_post(body, context: Context):
@@ -283,6 +308,14 @@ class ConfigurationFactory(IConfigurationFactory):
                             name="test-cmd-delete",
                             do_delete=lambda ctx: {"status": "deleted"}
                         ),
+                        Command(
+                            name="get-logs",
+                            do_post=lambda body, ctx: retrieve_logs(body, ctx)
+                        ),
+                        Command(
+                            name="set-jest-context",
+                            do_post=lambda body, ctx: apply_test_labels_logs(body)
+                        )
                     ]
                 )
             )

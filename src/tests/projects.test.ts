@@ -20,6 +20,7 @@ import {
 } from './utils'
 import { setup$ } from './local-youwol-test-setup'
 import { PipelineStepStatusResponse } from '../lib/routers/projects'
+import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -79,6 +80,12 @@ beforeAll(async (done) => {
         })
 })
 
+beforeEach(() => {
+    applyTestCtxLabels()
+})
+
+afterEach(() => resetTestCtxLabels())
+
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
 test('pyYouwol.admin.projects.status', (done) => {
     assertBeforeAllFinished()
@@ -99,7 +106,6 @@ test('pyYouwol.admin.projects.status', (done) => {
 test('pyYouwol.admin.projects.projectStatus', (done) => {
     assertBeforeAllFinished()
     const projectId = btoa(projectName)
-
     combineLatest([
         pyYouwol.admin.projects
             .getProjectStatus$({ projectId })

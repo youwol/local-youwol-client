@@ -11,6 +11,7 @@ import {
     CreateProjectFromTemplateBody,
     CreateProjectFromTemplateResponse,
 } from '../lib/routers/projects'
+import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -18,10 +19,14 @@ beforeEach(async (done) => {
     setup$({
         localOnly: true,
         email: 'int_tests_yw-users@test-user',
-    }).subscribe(() => {
-        done()
     })
+        .pipe(tap(() => applyTestCtxLabels()))
+        .subscribe(() => {
+            done()
+        })
 })
+
+afterEach(() => resetTestCtxLabels())
 
 function testProjectCreationBase(body: CreateProjectFromTemplateBody) {
     const projectStatusWs$ = pyYouwol.admin.projects.webSocket.status$().pipe(

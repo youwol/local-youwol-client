@@ -17,24 +17,46 @@ import {
     wrap,
 } from '@youwol/http-primitives'
 import { readFileSync } from 'fs'
-import { Observable } from 'rxjs'
-import { map, mapTo, mergeMap, reduce, takeWhile, tap } from 'rxjs/operators'
+import { Observable, of, Subscription, timer } from 'rxjs'
+import { filter, map, mapTo, mergeMap, reduce, take, tap } from 'rxjs/operators'
 
 import { PyYouwolClient } from '../lib'
 import { UploadAssetResponse } from '../lib/routers/environment'
 import { CreateAssetBody } from '@youwol/http-clients/src/lib/assets-backend/interfaces'
 import { NewAssetResponse } from '@youwol/http-clients/src/lib/assets-gateway'
+import { randomUUID } from 'crypto'
+import { DownloadEvent } from '../lib/routers/system'
+import { setup$ as ywSetup$ } from './local-youwol-test-setup'
+import {
+    GetCdnStatusResponse,
+    ResetCdnResponse,
+} from '../lib/routers/local-cdn'
 
 export class Shell<T> extends ShellBase<T> {
+    public readonly pyYouwol = new PyYouwolClient()
     public readonly assetsGtw: AssetsGateway.Client
     public readonly homeFolderId: string
     public readonly defaultDriveId: string
     public readonly privateGroupId: string
+    public readonly subscriptions: { [_k: string]: Subscription } = {}
+
+    addSubscription(key: string, sub: Subscription) {
+        this.subscriptions[key] = sub
+    }
+    unsubscribe(key: string) {
+        this.subscriptions[key].unsubscribe()
+        delete this.subscriptions[key]
+    }
+    tearDown() {
+        Object.values(this.subscriptions).forEach((s) => s.unsubscribe())
+    }
 }
 
 export function shell$<T>(context?: T) {
     const assetsGtw = new AssetsGateway.Client()
-    return assetsGtw.explorer.getDefaultUserDrive$().pipe(
+    return of(undefined).pipe(
+        addBookmarkLog({ text: "Shell's construction started" }),
+        mergeMap(() => assetsGtw.explorer.getDefaultUserDrive$()),
         raiseHTTPErrors(),
         map((resp: ExplorerBackend.GetDefaultDriveResponse) => {
             expect(resp.driveName).toBe('Default drive')
@@ -46,6 +68,7 @@ export function shell$<T>(context?: T) {
                 context,
             })
         }),
+        addBookmarkLog({ text: "Shell's construction done" }),
     )
 }
 
@@ -291,6 +314,34 @@ export function purgeDrive<TContext>(
     })
 }
 
+export function resetCdn<TContext>(
+    params?: ShellWrapperOptions<Shell<TContext>, ResetCdnResponse>,
+) {
+    return wrap<Shell<TContext>, ResetCdnResponse>({
+        observable: (shell: Shell<TContext>) =>
+            shell.pyYouwol.admin.localCdn.resetCdn$(),
+        ...params,
+        sideEffects: (resp: ResetCdnResponse) => {
+            expectAttributes(resp, ['deletedPackages'])
+            params.sideEffects && params.sideEffects(resp)
+        },
+    })
+}
+
+export function getCdnStatus<TContext>(
+    params?: ShellWrapperOptions<Shell<TContext>, GetCdnStatusResponse>,
+) {
+    return wrap<Shell<TContext>, GetCdnStatusResponse>({
+        observable: (shell: Shell<TContext>) =>
+            shell.pyYouwol.admin.localCdn.getStatus$(),
+        ...params,
+        sideEffects: (resp: GetCdnStatusResponse) => {
+            expectAttributes(resp, ['packages'])
+            params.sideEffects && params.sideEffects(resp)
+        },
+    })
+}
+
 type NewFluxProject =
     AssetsGateway.NewAssetResponse<FluxBackend.NewProjectResponse>
 
@@ -392,26 +443,170 @@ export function getAssetZipFiles<TContext>(
     })
 }
 
-export function expectDownloadEvents(pyYouwol: PyYouwolClient) {
-    return (observable: Observable<Shell<{ assetId: string }>>) =>
-        observable.pipe(
-            mergeMap((shell) =>
-                pyYouwol.admin.system.webSocket.downloadEvent$().pipe(
-                    takeWhile((event) => {
-                        if (event.data.type == 'failed') {
-                            throw Error('Failed to download asset')
-                        }
-                        return event.data && event.data.type != 'succeeded'
-                    }, true),
-                    reduce((acc, e) => [...acc, e], []),
+export function expectDownloadEvents<TContext>(
+    assetId: string,
+    downloadEvents$: Observable<{ data: DownloadEvent }>,
+    expectedStatus: 'succeeded' | 'failed' = 'succeeded',
+) {
+    const keyTick$ = 'tick$'
+    const rawId = window.atob(assetId)
+    return (observable: Observable<Shell<TContext>>) => {
+        return observable.pipe(
+            tap((shell) => {
+                shell.addSubscription(
+                    keyTick$,
+                    timer(0, 500)
+                        .pipe(addBookmarkLog({ text: (c) => `tick ${c}` }))
+                        .subscribe(),
+                )
+            }),
+            mergeMap((shell) => {
+                return downloadEvents$.pipe(
+                    filter((event) => {
+                        return event.data.rawId == rawId
+                    }),
+                    addBookmarkLog({
+                        text: (event) =>
+                            `Received event ${event.data.type} for ${event.data.rawId}`,
+                        data: (event) => ({
+                            type: event.data.type,
+                            rawId: event.data.rawId,
+                        }),
+                    }),
+                    take(3),
+                    reduce((acc, e) => [...acc, e.data.type], []),
                     tap((events) => {
-                        expect([2, 3].includes(events.length)).toBeTruthy()
-                        expect(events.slice(-1)[0].data.rawId).toBe(
-                            window.atob(shell.context.assetId),
-                        )
+                        expect(events).toEqual([
+                            'enqueued',
+                            'started',
+                            expectedStatus,
+                        ])
                     }),
                     mapTo(shell),
-                ),
-            ),
+                    tap((shell) => {
+                        shell.unsubscribe(keyTick$)
+                    }),
+                )
+            }),
         )
+    }
+}
+
+export function applyTestCtxLabels<T>() {
+    const testName = jasmine['currentTest'].fullName
+    const file = jasmine['currentTest'].testPath.split(
+        'local-youwol-client/src/tests/',
+    )[1]
+    return (source$: Observable<T>) => {
+        return source$.pipe(
+            mergeMap(() => {
+                return new PyYouwolClient().admin.customCommands
+                    .doPost$({
+                        name: 'set-jest-context',
+                        body: { file: `src/tests/${file}`, testName },
+                    })
+                    .pipe(raiseHTTPErrors())
+            }),
+        )
+    }
+}
+
+export function resetTestCtxLabels<T>() {
+    return (source$: Observable<T>) => {
+        return source$.pipe(
+            mergeMap(() => {
+                return new PyYouwolClient().admin.customCommands
+                    .doPost$({
+                        name: 'set-jest-context',
+                        body: { file: '', testName: '' },
+                    })
+                    .pipe(raiseHTTPErrors())
+            }),
+        )
+    }
+}
+
+export function addBookmarkLog<T>({
+    text,
+    data,
+}: {
+    text: string | ((d: T) => string)
+    data?: (d: T) => { [_k: string]: unknown }
+}) {
+    const testName = jasmine['currentTest'].fullName
+    const file = jasmine['currentTest'].testPath.split(
+        '@youwol/local-youwol-client/',
+    )[1]
+    return (source$: Observable<T>) => {
+        return source$.pipe(
+            mergeMap((d) => {
+                return new PyYouwolClient().admin.system
+                    .addLogs$({
+                        body: {
+                            logs: [
+                                {
+                                    traceUid: randomUUID(),
+                                    level: 'INFO',
+                                    attributes: {},
+                                    labels: [
+                                        testName,
+                                        file,
+                                        'Label.BOOKMARK',
+                                        'Label.LOG_INFO',
+                                        'Label.STARTED',
+                                    ],
+                                    text:
+                                        typeof text == 'string'
+                                            ? `${testName}: ${text}`
+                                            : `${testName}: ${text(d)}`,
+                                    data: data ? data(d) : {},
+                                    contextId: randomUUID(),
+                                    parentContextId: 'root',
+                                    timestamp: Date.now() * 1e3,
+                                },
+                            ],
+                        },
+                    })
+                    .pipe(map(() => d))
+            }),
+        )
+    }
+}
+
+export function testSetup$() {
+    return of(undefined).pipe(
+        applyTestCtxLabels(),
+        addBookmarkLog({
+            text: `beforeEach started`,
+        }),
+        mergeMap(() => {
+            return ywSetup$({
+                localOnly: false,
+                email: 'int_tests_yw-users@test-user',
+            })
+        }),
+        applyTestCtxLabels(),
+        addBookmarkLog({
+            text: `beforeEach done`,
+        }),
+    )
+}
+
+export function testTearDown$(shell: Shell<unknown>) {
+    if (!shell) {
+        return of(undefined)
+    }
+    return of(shell).pipe(
+        addBookmarkLog({
+            text: `afterEach started, tear down shell`,
+            data: (s) => ({ subscriptions: Object.keys(s.subscriptions) }),
+        }),
+        tap((shell) => {
+            shell.tearDown()
+        }),
+        addBookmarkLog({
+            text: `afterEach done`,
+        }),
+        resetTestCtxLabels(),
+    )
 }

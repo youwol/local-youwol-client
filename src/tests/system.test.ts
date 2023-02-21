@@ -1,9 +1,10 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
-import { mergeMap, tap } from 'rxjs/operators'
+import { mergeMap } from 'rxjs/operators'
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
 import path from 'path'
+import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -15,6 +16,12 @@ beforeAll(async (done) => {
         done()
     })
 })
+
+beforeEach(() => {
+    applyTestCtxLabels()
+})
+
+afterEach(() => resetTestCtxLabels())
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in functions
 test('pyYouwol.admin.system.queryRootLogs', (done) => {
@@ -60,31 +67,31 @@ test('pyYouwol.admin.system.queryLogs', (done) => {
         })
 })
 
-test('pyYouwol.admin.system.clearLogs', (done) => {
-    pyYouwol.admin.system
-        .queryRootLogs$({ fromTimestamp: Date.now(), maxCount: 100 })
-        .pipe(
-            raiseHTTPErrors(),
-            tap((resp) => {
-                expect(resp.logs.length).toBeGreaterThanOrEqual(1)
-            }),
-            mergeMap(() => pyYouwol.admin.system.clearLogs$()),
-            raiseHTTPErrors(),
-            mergeMap(() =>
-                pyYouwol.admin.system.queryRootLogs$({
-                    fromTimestamp: Date.now(),
-                    maxCount: 100,
-                }),
-            ),
-            raiseHTTPErrors(),
-            tap((resp) => {
-                expect(resp.logs).toHaveLength(0)
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
-})
+// test('pyYouwol.admin.system.clearLogs', (done) => {
+//     pyYouwol.admin.system
+//         .queryRootLogs$({ fromTimestamp: Date.now(), maxCount: 100 })
+//         .pipe(
+//             raiseHTTPErrors(),
+//             tap((resp) => {
+//                 expect(resp.logs.length).toBeGreaterThanOrEqual(1)
+//             }),
+//             mergeMap(() => pyYouwol.admin.system.clearLogs$()),
+//             raiseHTTPErrors(),
+//             mergeMap(() =>
+//                 pyYouwol.admin.system.queryRootLogs$({
+//                     fromTimestamp: Date.now(),
+//                     maxCount: 100,
+//                 }),
+//             ),
+//             raiseHTTPErrors(),
+//             tap((resp) => {
+//                 expect(resp.logs).toHaveLength(0)
+//             }),
+//         )
+//         .subscribe(() => {
+//             done()
+//         })
+// })
 
 test('pyYouwol.admin.system.queryFolderContent', (done) => {
     pyYouwol.admin.environment

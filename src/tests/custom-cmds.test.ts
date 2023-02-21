@@ -5,6 +5,7 @@ import { PyYouwolClient } from '../lib'
 import { combineLatest } from 'rxjs'
 import { reduce, take, tap } from 'rxjs/operators'
 import { setup$ } from './local-youwol-test-setup'
+import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -16,6 +17,12 @@ beforeAll(async (done) => {
         done()
     })
 })
+
+beforeEach(() => {
+    applyTestCtxLabels()
+})
+
+afterEach(() => resetTestCtxLabels())
 
 test('pyYouwol.admin.customCommands.doPost$', (done) => {
     combineLatest([
