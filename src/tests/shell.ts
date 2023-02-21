@@ -495,7 +495,7 @@ export function expectDownloadEvents<TContext>(
 export function applyTestCtxLabels<T>() {
     const testName = jasmine['currentTest'].fullName
     const file = jasmine['currentTest'].testPath.split(
-        '@youwol/local-youwol-client/',
+        'local-youwol-client/src/tests/',
     )[1]
     return (source$: Observable<T>) => {
         return source$.pipe(
@@ -503,7 +503,7 @@ export function applyTestCtxLabels<T>() {
                 return new PyYouwolClient().admin.customCommands
                     .doPost$({
                         name: 'set-jest-context',
-                        body: { file, testName },
+                        body: { file: `src/tests/${file}`, testName },
                     })
                     .pipe(raiseHTTPErrors())
             }),
