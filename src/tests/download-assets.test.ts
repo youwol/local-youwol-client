@@ -14,7 +14,6 @@ import {
 import {
     addBookmarkLog,
     expectDownloadEvents,
-    getAsset,
     getAssetZipFiles,
     Shell,
     shell$,
@@ -72,20 +71,19 @@ function test_download_asset<TContext>({
         }),
         addBookmarkLog({ text: `Start` }),
         addBookmarkLog({
-            text: `GET asset to trigger download`,
+            text: `GET asset's raw part to trigger download`,
         }),
-        getAsset(
-            () => {
+        send<string, TContext>({
+            inputs: () => {
                 return {
-                    assetId: assetId,
+                    commandType: 'query',
+                    path: getTestPath,
                 }
             },
-            {
-                sideEffects: (response) => {
-                    expect(response.assetId).toBe(assetId)
-                },
+            sideEffects: (response) => {
+                expect(response).toBeTruthy()
             },
-        ),
+        }),
         addBookmarkLog({
             text: `Wait for download to proceed successfully`,
         }),
@@ -98,6 +96,9 @@ function test_download_asset<TContext>({
                 return {
                     commandType: 'query',
                     path: getTestPath,
+                    nativeOptions: {
+                        headers: { 'py-youwol-local-only': 'true' },
+                    },
                 }
             },
             sideEffects: (response) => {
@@ -151,7 +152,7 @@ test('download custom asset with files', (done) => {
     }
 
     const assetId = remoteCustomAssetId
-    const getTestPath = `${RootRouter.HostName}/api/assets-gateway/assets-backend/assets/${assetId}`
+    const getTestPath = `${RootRouter.HostName}/api/assets-gateway/assets-backend/assets/${assetId}/files/topLevelFile.json`
 
     test_download_asset({
         assetId,

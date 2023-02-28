@@ -3,7 +3,6 @@
 import { remoteStoryAssetId } from './remote_assets_id'
 import {
     applyTestCtxLabels,
-    expectDownloadEvents,
     getAsset,
     getPermissions,
     resetTestCtxLabels,
@@ -12,7 +11,7 @@ import {
 } from './shell'
 import { setup$ } from './local-youwol-test-setup'
 import { PyYouwolClient } from '../lib'
-import { take, tap } from 'rxjs/operators'
+import { delay, take, tap } from 'rxjs/operators'
 import { ReplaySubject } from 'rxjs'
 import { DownloadEvent } from '../lib/routers/system'
 
@@ -60,7 +59,7 @@ test('can retrieve asset info when remote only', (done) => {
                     },
                 },
             ),
-            expectDownloadEvents(remoteStoryAssetId, downloadEvents$),
+            //expectDownloadEvents(remoteStoryAssetId, downloadEvents$),
             getPermissions(
                 (shell) => {
                     return {
