@@ -493,6 +493,9 @@ export function expectDownloadEvents<TContext>(
                     }),
                     take(3),
                     reduce((acc, e) => [...acc, e.data.type], []),
+                    addBookmarkLog({
+                        text: (events) => `Received 3 events ${events}`,
+                    }),
                     tap((events) => {
                         expect(events).toEqual([
                             'enqueued',
