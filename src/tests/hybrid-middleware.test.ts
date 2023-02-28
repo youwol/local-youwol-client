@@ -11,7 +11,7 @@ import {
 } from './shell'
 import { setup$ } from './local-youwol-test-setup'
 import { PyYouwolClient } from '../lib'
-import { delay, take, tap } from 'rxjs/operators'
+import { take, tap } from 'rxjs/operators'
 import { ReplaySubject } from 'rxjs'
 import { DownloadEvent } from '../lib/routers/system'
 
