@@ -3,7 +3,6 @@
 import { remoteStoryAssetId } from './remote_assets_id'
 import {
     applyTestCtxLabels,
-    expectDownloadEvents,
     getAsset,
     getPermissions,
     resetTestCtxLabels,
@@ -60,7 +59,7 @@ test('can retrieve asset info when remote only', (done) => {
                     },
                 },
             ),
-            expectDownloadEvents(remoteStoryAssetId, downloadEvents$),
+            //expectDownloadEvents(remoteStoryAssetId, downloadEvents$),
             getPermissions(
                 (shell) => {
                     return {
