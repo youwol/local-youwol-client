@@ -5,16 +5,18 @@ import { RootRouter, send } from '@youwol/http-primitives'
 import { mergeMap, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 
-import { from, ReplaySubject } from 'rxjs'
+import { from, Observable, ReplaySubject } from 'rxjs'
 import {
     remoteCustomAssetId,
     remoteDataFileAssetId,
     remoteFluxAssetId,
+    remoteStoryAssetId,
 } from './remote_assets_id'
 import {
     addBookmarkLog,
     expectDownloadEvents,
     getAssetZipFiles,
+    getStoryDocuments,
     Shell,
     shell$,
     testSetup$,
@@ -46,15 +48,20 @@ afterEach((done) => {
 
 function test_download_asset<TContext>({
     assetId,
+    whileDownloadOperator,
     getTestPath,
     context,
 }: {
     assetId: string
     getTestPath: string
+    whileDownloadOperator?: (
+        observable: Observable<Shell<TContext>>,
+    ) => Observable<Shell<TContext>>
     context: TContext
 }) {
     const downloadEvents$ = new ReplaySubject<{ data: DownloadEvent }>()
-
+    const idOp = (observable) => observable
+    whileDownloadOperator = whileDownloadOperator || idOp
     return shell$<TContext>(context).pipe(
         // ensure shell's tearDown in 'afterEach'
         tap((shell) => (currentShell = shell)),
@@ -84,6 +91,7 @@ function test_download_asset<TContext>({
                 expect(response).toBeTruthy()
             },
         }),
+        whileDownloadOperator,
         addBookmarkLog({
             text: `Wait for download to proceed successfully`,
         }),
@@ -133,6 +141,44 @@ test('download data', (done) => {
 
     test_download_asset({
         assetId,
+        getTestPath,
+        context: new Context(),
+    }).subscribe(() => done())
+})
+
+test('download story', (done) => {
+    class Context {
+        public readonly assetId = remoteStoryAssetId
+        public readonly rawId = window.atob(remoteStoryAssetId)
+    }
+    const getTestPath = `${
+        RootRouter.HostName
+    }/api/assets-gateway/stories-backend/stories/${window.atob(
+        remoteStoryAssetId,
+    )}`
+
+    test_download_asset({
+        assetId: remoteStoryAssetId,
+        whileDownloadOperator: (shell$: Observable<Shell<Context>>) => {
+            return shell$.pipe(
+                addBookmarkLog({
+                    text: `Make sure documents can be retrieved while downloading (from remote)`,
+                }),
+                getStoryDocuments(
+                    (s) => {
+                        return {
+                            storyId: s.context.rawId,
+                            parentDocumentId: s.context.rawId,
+                        }
+                    },
+                    {
+                        sideEffects: (response) => {
+                            expect(response.documents.length).toBeGreaterThan(0)
+                        },
+                    },
+                ),
+            )
+        },
         getTestPath,
         context: new Context(),
     }).subscribe(() => done())
