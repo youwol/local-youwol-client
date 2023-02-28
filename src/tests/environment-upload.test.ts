@@ -29,7 +29,7 @@ import {
     applyTestCtxLabels,
     resetTestCtxLabels,
 } from './shell'
-import { Observable } from 'rxjs'
+import { Observable, of } from 'rxjs'
 import path from 'path'
 import { setup$ } from './local-youwol-test-setup'
 import { NewAssetResponse } from '@youwol/http-clients/src/lib/assets-gateway'
@@ -44,11 +44,17 @@ beforeAll(async (done) => {
     })
 })
 
-beforeEach(() => {
-    applyTestCtxLabels()
+beforeEach((done) => {
+    of(undefined)
+        .pipe(applyTestCtxLabels())
+        .subscribe(() => done())
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 interface UploadContext {
     asset: AssetsGateway.NewAssetResponse<unknown>

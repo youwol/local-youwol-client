@@ -2,7 +2,7 @@
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
 
-import { combineLatest } from 'rxjs'
+import { combineLatest, of } from 'rxjs'
 import { reduce, take, tap } from 'rxjs/operators'
 import { setup$ } from './local-youwol-test-setup'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
@@ -18,11 +18,17 @@ beforeAll(async (done) => {
     })
 })
 
-beforeEach(() => {
-    applyTestCtxLabels()
+beforeEach((done) => {
+    of(undefined)
+        .pipe(applyTestCtxLabels())
+        .subscribe(() => done())
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 test('pyYouwol.admin.customCommands.doPost$', (done) => {
     combineLatest([

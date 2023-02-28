@@ -2,7 +2,7 @@
 
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 
-import { combineLatest } from 'rxjs'
+import { combineLatest, of } from 'rxjs'
 import { skipWhile, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 
@@ -26,7 +26,11 @@ beforeEach(async (done) => {
         })
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 function testProjectCreationBase(body: CreateProjectFromTemplateBody) {
     const projectStatusWs$ = pyYouwol.admin.projects.webSocket.status$().pipe(

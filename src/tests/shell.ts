@@ -414,6 +414,24 @@ export function getStory<TContext>(
     })
 }
 
+export function getStoryDocuments<TContext>(
+    inputs: (shell: Shell<TContext>) => {
+        storyId: string
+        parentDocumentId: string
+    },
+    params?: ShellWrapperOptions<
+        Shell<TContext>,
+        StoriesBackend.QueryDocumentsResponse
+    >,
+) {
+    return wrap<Shell<TContext>, StoriesBackend.QueryDocumentsResponse>({
+        observable: (shell: Shell<TContext>) => {
+            return shell.assetsGtw.stories.queryDocuments$(inputs(shell))
+        },
+        ...params,
+    })
+}
+
 export function getFileInfo<TContext>(
     inputs: (shell: Shell<TContext>) => {
         fileId: string
@@ -475,6 +493,9 @@ export function expectDownloadEvents<TContext>(
                     }),
                     take(3),
                     reduce((acc, e) => [...acc, e.data.type], []),
+                    addBookmarkLog({
+                        text: (events) => `Received 3 events ${events}`,
+                    }),
                     tap((events) => {
                         expect(events).toEqual([
                             'enqueued',
@@ -539,8 +560,9 @@ export function addBookmarkLog<T>({
     )[1]
     return (source$: Observable<T>) => {
         return source$.pipe(
-            mergeMap((d) => {
-                return new PyYouwolClient().admin.system
+            // Do not 'mergeMap' and wait for response: 2 events very close in time can be switched otherwise.
+            tap((d) => {
+                new PyYouwolClient().admin.system
                     .addLogs$({
                         body: {
                             logs: [
@@ -567,7 +589,7 @@ export function addBookmarkLog<T>({
                             ],
                         },
                     })
-                    .pipe(map(() => d))
+                    .subscribe()
             }),
         )
     }
