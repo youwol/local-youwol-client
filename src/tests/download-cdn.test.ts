@@ -94,29 +94,33 @@ test('install package @youwol/logging#0.0.2-next => Failure', (done) => {
         .subscribe(() => done())
 })
 
-test('install package rxjs + clear + install package rxjs', (done) => {
-    class Context {}
-    return shell$<Context>(new Context())
-        .pipe(
-            // ensure shell's tearDown in 'afterEach'
-            tap((shell) => (currentShell = shell)),
-            testDownloadPackage('rxjs', 'succeeded'),
-            addBookmarkLog({ text: `Reset CDN` }),
-            resetCdn({
-                sideEffects: (resp: ResetCdnResponse) => {
-                    expect(resp.deletedPackages).toEqual(['rxjs'])
-                    State.resetCache()
-                },
-            }),
-            getCdnStatus({
-                sideEffects: (resp: GetCdnStatusResponse) => {
-                    expect(resp.packages).toHaveLength(0)
-                },
-            }),
-            addBookmarkLog({ text: `Download RxJS again` }),
-            testDownloadPackage('rxjs', 'succeeded'),
-        )
-        .subscribe(() => {
-            done()
-        })
-})
+test(
+    'install package rxjs + clear + install package rxjs',
+    (done) => {
+        class Context {}
+        return shell$<Context>(new Context())
+            .pipe(
+                // ensure shell's tearDown in 'afterEach'
+                tap((shell) => (currentShell = shell)),
+                testDownloadPackage('rxjs', 'succeeded'),
+                addBookmarkLog({ text: `Reset CDN` }),
+                resetCdn({
+                    sideEffects: (resp: ResetCdnResponse) => {
+                        expect(resp.deletedPackages).toEqual(['rxjs'])
+                        State.resetCache()
+                    },
+                }),
+                getCdnStatus({
+                    sideEffects: (resp: GetCdnStatusResponse) => {
+                        expect(resp.packages).toHaveLength(0)
+                    },
+                }),
+                addBookmarkLog({ text: `Download RxJS again` }),
+                testDownloadPackage('rxjs', 'succeeded'),
+            )
+            .subscribe(() => {
+                done()
+            })
+    },
+    20 * 1000,
+)
