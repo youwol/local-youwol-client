@@ -414,6 +414,24 @@ export function getStory<TContext>(
     })
 }
 
+export function getStoryDocuments<TContext>(
+    inputs: (shell: Shell<TContext>) => {
+        storyId: string
+        parentDocumentId: string
+    },
+    params?: ShellWrapperOptions<
+        Shell<TContext>,
+        StoriesBackend.QueryDocumentsResponse
+    >,
+) {
+    return wrap<Shell<TContext>, StoriesBackend.QueryDocumentsResponse>({
+        observable: (shell: Shell<TContext>) => {
+            return shell.assetsGtw.stories.queryDocuments$(inputs(shell))
+        },
+        ...params,
+    })
+}
+
 export function getFileInfo<TContext>(
     inputs: (shell: Shell<TContext>) => {
         fileId: string
