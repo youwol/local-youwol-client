@@ -12,7 +12,7 @@ import {
 import { setup$ } from './local-youwol-test-setup'
 import { PyYouwolClient } from '../lib'
 import { delay, take, tap } from 'rxjs/operators'
-import { BehaviorSubject } from 'rxjs'
+import { BehaviorSubject, of } from 'rxjs'
 import { DownloadEvent } from '../lib/routers/system'
 
 jest.setTimeout(20 * 1000)
@@ -30,7 +30,11 @@ beforeEach((done) => {
         })
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 test('can retrieve asset info when remote only', (done) => {
     class Context {

@@ -3,7 +3,7 @@ import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { AssetsGateway } from '@youwol/http-clients'
 
 import { install } from '@youwol/cdn-client'
-import { combineLatest, from } from 'rxjs'
+import { combineLatest, from, of } from 'rxjs'
 import { mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 import { expectDownloadEvents$, expectUpdateStatus } from './utils'
@@ -25,7 +25,11 @@ beforeEach(async (done) => {
         })
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 test('pyYouwol.admin.local-cdn.status', (done) => {
     combineLatest([

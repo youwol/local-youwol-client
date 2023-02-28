@@ -80,11 +80,17 @@ beforeAll(async (done) => {
         })
 })
 
-beforeEach(() => {
-    applyTestCtxLabels()
+beforeEach((done) => {
+    of(undefined)
+        .pipe(applyTestCtxLabels())
+        .subscribe(() => done())
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
 test('pyYouwol.admin.projects.status', (done) => {

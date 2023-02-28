@@ -5,6 +5,7 @@ import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
 import path from 'path'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
+import { of } from 'rxjs'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -17,11 +18,17 @@ beforeAll(async (done) => {
     })
 })
 
-beforeEach(() => {
-    applyTestCtxLabels()
+beforeEach((done) => {
+    of(undefined)
+        .pipe(applyTestCtxLabels())
+        .subscribe(() => done())
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in functions
 test('pyYouwol.admin.system.queryRootLogs', (done) => {

@@ -1,7 +1,7 @@
 /* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
 
 import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
-import { combineLatest } from 'rxjs'
+import { combineLatest, of } from 'rxjs'
 import { mergeMap, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
@@ -19,11 +19,17 @@ beforeAll(async (done) => {
     })
 })
 
-beforeEach(() => {
-    applyTestCtxLabels()
+beforeEach((done) => {
+    of(undefined)
+        .pipe(applyTestCtxLabels())
+        .subscribe(() => done())
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 test('pyYouwol.admin.environment.login', (done) => {
     pyYouwol.admin.environment

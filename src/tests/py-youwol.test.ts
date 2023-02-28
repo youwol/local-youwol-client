@@ -4,6 +4,7 @@ import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
 import { tap } from 'rxjs/operators'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
+import { of } from 'rxjs'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -18,7 +19,11 @@ beforeEach(async (done) => {
         })
 })
 
-afterEach(() => resetTestCtxLabels())
+afterEach((done) => {
+    of(undefined)
+        .pipe(resetTestCtxLabels())
+        .subscribe(() => done())
+})
 
 test('query healthz', (done) => {
     pyYouwol
