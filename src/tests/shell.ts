@@ -560,8 +560,9 @@ export function addBookmarkLog<T>({
     )[1]
     return (source$: Observable<T>) => {
         return source$.pipe(
-            mergeMap((d) => {
-                return new PyYouwolClient().admin.system
+            // Do not 'mergeMap' and wait for response: 2 events very close in time can be switched otherwise.
+            tap((d) => {
+                new PyYouwolClient().admin.system
                     .addLogs$({
                         body: {
                             logs: [
@@ -588,7 +589,7 @@ export function addBookmarkLog<T>({
                             ],
                         },
                     })
-                    .pipe(map(() => d))
+                    .subscribe()
             }),
         )
     }
