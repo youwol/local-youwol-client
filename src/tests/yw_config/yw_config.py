@@ -9,14 +9,14 @@ import brotli
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from youwol.main_args import MainArguments
-from youwol.routers.projects import ProjectLoader
-from youwol.routers.system.router import Log, NodeLogResponse, LeafLogResponse
+from youwol.app.main_args import MainArguments
+from youwol.app.routers.projects import ProjectLoader
+from youwol.app.routers.system.router import Log, NodeLogResponse, LeafLogResponse
 
-from youwol_utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label, InMemoryReporter, \
+from youwol.utils import execute_shell_cmd, sed_inplace, parse_json, Context, Label, InMemoryReporter, \
     ContextFactory
 
-from youwol.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, DirectAuth, \
+from youwol.app.environment import Projects, System, Customization, CustomEndPoints, CloudEnvironments, DirectAuth, \
     LocalEnvironment, CustomMiddleware, FlowSwitcherMiddleware, CdnSwitch, \
     RemoteClients, Command, Configuration, YouwolEnvironment, LocalClients, CloudEnvironment, \
     get_standard_auth_provider, Connection, IConfigurationFactory

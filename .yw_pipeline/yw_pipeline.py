@@ -1,8 +1,8 @@
-from youwol.environment.forward_declaration import YouwolEnvironment
-from youwol.environment.models import IPipelineFactory
-from youwol.environment.models_project import JsBundle, Link, Pipeline
+from youwol.app.environment import YouwolEnvironment
+from youwol.app.environment.models import IPipelineFactory
+from youwol.app.environment.models_project import JsBundle, Link, Pipeline
 from youwol.pipelines.pipeline_typescript_weback_npm import pipeline, PipelineConfig
-from youwol_utils.context import Context
+from youwol.utils.context import Context
 
 
 class PipelineFactory(IPipelineFactory):
