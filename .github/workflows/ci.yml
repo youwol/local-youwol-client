@@ -13,6 +13,7 @@ jobs:
     uses: youwol/nestor/.github/workflows/typescript-ci.yaml@v3
     with:
       skip: tests
+      pyYouwolRef: feature/refactor
 
   nestor_integration_tests:
     name: Integration Tests
@@ -22,3 +23,4 @@ jobs:
       confRef: ${{ github.ref }}
       confRepository: ${{ github.repository }}
       confPath: src/tests/yw_config/yw_config.py
+      pyYouwolRef: feature/refactor
