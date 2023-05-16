@@ -22,17 +22,16 @@ from youwol.app.environment import Projects, System, Customization, CustomEndPoi
     get_standard_auth_provider, Connection, IConfigurationFactory
 from youwol.pipelines.pipeline_typescript_weback_npm import lib_ts_webpack_template, app_ts_webpack_template
 
-
 import youwol.pipelines.pipeline_typescript_weback_npm as pipeline_ts
 
 
-async def clone_project(git_url: str, new_project_name: str, ctx: Context):
+async def clone_project(git_url: str, branch: str, new_project_name: str, ctx: Context):
     folder_name = new_project_name.split("/")[-1]
     git_folder_name = git_url.split('/')[-1].split('.')[0]
     env = await ctx.get('env', YouwolEnvironment)
     parent_folder = env.pathsBook.config.parent / 'projects'
     dst_folder = parent_folder / folder_name
-    await execute_shell_cmd(cmd=f"(cd {parent_folder} && git clone {git_url})",
+    await execute_shell_cmd(cmd=f"(cd {parent_folder} && git clone -b {branch} {git_url})",
                             context=ctx)
     if not (parent_folder / git_folder_name).exists():
         raise RuntimeError("Git repo not properly cloned")
@@ -50,7 +49,7 @@ async def purge_downloads(context: Context):
         assets_gtw = await RemoteClients.get_assets_gateway_client(remote_host=env.get_remote_info().host)
         headers = ctx.headers()
         default_drive = await LocalClients \
-            .get_assets_gateway_client(env)\
+            .get_assets_gateway_client(env) \
             .get_treedb_backend_router() \
             .get_default_user_drive(headers=context.headers())
         treedb_client = assets_gtw.get_treedb_backend_router()
@@ -147,7 +146,6 @@ async def create_test_data_remote(context: Context):
 
 
 async def erase_all_test_data_remote(context: Context):
-
     async with context.start("erase_all_test_data_remote") as ctx:
         env: YouwolEnvironment = await context.get('env', YouwolEnvironment)
         host = env.get_remote_info().host
@@ -165,10 +163,10 @@ async def erase_all_test_data_remote(context: Context):
 
 
 class BrotliDecompressMiddleware(CustomMiddleware):
-
     """
         Simple middleware that logs incoming and outgoing headers
         """
+
     async def dispatch(
             self,
             incoming_request: Request,
@@ -198,7 +196,6 @@ class BrotliDecompressMiddleware(CustomMiddleware):
 
 
 pipeline_ts.set_environment()
-
 
 users = [
     (os.getenv("USERNAME_INTEGRATION_TESTS"), os.getenv("PASSWORD_INTEGRATION_TESTS")),
@@ -282,8 +279,7 @@ class ConfigurationFactory(IConfigurationFactory):
                         ),
                         Command(
                             name="clone-project",
-                            do_post=lambda body, ctx: clone_project(body['url'], body['name'], ctx)
-                        ),
+                            do_post=lambda body, ctx: clone_project(body['url'], body['branch'], body['name'], ctx)),
                         Command(
                             name="purge-downloads",
                             do_delete=lambda ctx: purge_downloads(ctx)
