@@ -8,8 +8,17 @@ on:
       - main
 
 jobs:
-  nestor_ci:
+  nestor_typescrit_ci:
     name: Typescript
-    uses: youwol/nestor/.github/workflows/typescript-ci.yml@v1
+    uses: youwol/nestor/.github/workflows/typescript-ci.yaml@v3
     with:
-      skip: 'test'
+      skip: tests
+
+  nestor_integration_tests:
+    name: Integration Tests
+    uses: youwol/nestor/.github/workflows/integration-tests.yaml@v3
+    secrets: inherit
+    with:
+      confRef: ${{ github.ref }}
+      confRepository: ${{ github.repository }}
+      confPath: src/tests/yw_config/yw_config.py
