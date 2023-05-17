@@ -3,7 +3,7 @@ from pathlib import Path
 
 from youwol.pipelines.pipeline_typescript_weback_npm import Template, PackageType, Dependencies, \
     RunTimeDeps, generate_template, Bundles, MainModule
-from youwol_utils import parse_json
+from youwol.utils import parse_json
 
 folder_path = Path(__file__).parent
 
@@ -25,6 +25,7 @@ template = Template(
             }
         ),
         devTime={
+            "jest-jasmine2": "^29.3.1",
             "@youwol/cdn-client": "^1.0.4",
             "@youwol/http-clients": "^2.0.2",
             "adm-zip": "^0.5.9"
