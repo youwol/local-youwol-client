@@ -64,7 +64,7 @@ beforeAll(async (done) => {
                     name: 'clone-project',
                     body: {
                         url: 'https://github.com/youwol/todo-app-js.git',
-                        branch: 'feature/refactor',
+                        branch: 'master',
                         name: projectName,
                     },
                 }),
