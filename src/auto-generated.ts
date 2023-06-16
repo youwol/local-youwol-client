@@ -56,7 +56,7 @@ export const setup = {
         assetId:'QHlvdXdvbC9sb2NhbC15b3V3b2wtY2xpZW50',
     version:'0.1.5',
     shortDescription:"Client for local py-youwol",
-    developerDocumentation:'https://platform.youwol.com/applications/@youwol/cdn-explorer/latest?package=@youwol/local-youwol-client',
+    developerDocumentation:'https://platform.youwol.com/applications/@youwol/cdn-explorer/latest?package=@youwol/local-youwol-client&tab=doc',
     npmPackage:'https://www.npmjs.com/package/@youwol/local-youwol-client',
     sourceGithub:'https://github.com/youwol/local-youwol-client',
     userGuide:'https://l.youwol.com/doc/@youwol/local-youwol-client',
@@ -71,7 +71,7 @@ export const setup = {
     },
 
     installMainModule: ({cdnClient, installParameters}:{
-        cdnClient:{install:(unknown) => Promise<Window>},
+        cdnClient:{install:(unknown) => Promise<WindowOrWorkerGlobalScope>},
         installParameters?
     }) => {
         const parameters = installParameters || {}
@@ -90,7 +90,7 @@ export const setup = {
     },
     installAuxiliaryModule: ({name, cdnClient, installParameters}:{
         name: string,
-        cdnClient:{install:(unknown) => Promise<Window>},
+        cdnClient:{install:(unknown) => Promise<WindowOrWorkerGlobalScope>},
         installParameters?
     }) => {
         const entry = secondaryEntries[name]

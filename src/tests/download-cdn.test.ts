@@ -124,3 +124,61 @@ test(
     },
     20 * 1000,
 )
+
+// eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
+test(
+    'version resolution if other majors already downloaded',
+    (done) => {
+        // coming from https://tooling.youwol.com/taiga/project/pyyouwol/issue/1203
+        const downloadEvents1$ = new ReplaySubject<{ data: DownloadEvent }>()
+        const downloadEvents2$ = new ReplaySubject<{ data: DownloadEvent }>()
+        const rawId = 'QHlvdXdvbC9jZG4tY2xpZW50'
+        const assetId = window.btoa(rawId)
+        class Context {}
+        return shell$<Context>(new Context())
+            .pipe(
+                tap((shell) => {
+                    currentShell = shell
+                    shell.addSubscription(
+                        'downloadEvents_^1.0.0',
+                        pyYouwol.admin.system.webSocket
+                            .downloadEvent$()
+                            .subscribe((d) => downloadEvents1$.next(d)),
+                    )
+                }),
+                addBookmarkLog({ text: `fetch script ^1.0.0` }),
+                mergeMap((shell) => {
+                    return from(
+                        fetch(
+                            `/api/assets-gateway/raw/package/${rawId}/^1.0.0/dist/@youwol/cdn-client.js`,
+                        ).then(() => shell),
+                    )
+                }),
+                expectDownloadEvents(assetId, downloadEvents1$, 'succeeded'),
+                addBookmarkLog({ text: `^1.0.0 succeeded` }),
+                tap((shell) => {
+                    downloadEvents1$.complete()
+                    shell.addSubscription(
+                        'downloadEvents_^2.0.0',
+                        pyYouwol.admin.system.webSocket
+                            .downloadEvent$()
+                            .subscribe((d) => downloadEvents2$.next(d)),
+                    )
+                }),
+                addBookmarkLog({ text: `fetch script ^2.0.0` }),
+                mergeMap((shell) => {
+                    return from(
+                        fetch(
+                            `/api/assets-gateway/raw/package/${rawId}/^2.0.0/dist/@youwol/cdn-client.js`,
+                        ).then(() => shell),
+                    )
+                }),
+                expectDownloadEvents(assetId, downloadEvents2$, 'succeeded'),
+                addBookmarkLog({ text: `^2.0.0 succeeded` }),
+            )
+            .subscribe(() => {
+                done()
+            })
+    },
+    20 * 1000,
+)
