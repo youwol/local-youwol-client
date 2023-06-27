@@ -189,7 +189,7 @@ test('download custom asset with files', (done) => {
         public readonly assetId = remoteCustomAssetId
         public readonly zipPath = path.resolve(
             __dirname,
-            './test-data/test-download-asset-files.zip',
+            './data/test-download-asset-files.zip',
         )
         public readonly blobZip: Blob
         constructor(params = {}) {
