@@ -225,7 +225,7 @@ test('upload story', (done) => {
 test('upload data', (done) => {
     class Context implements UploadContext {
         public readonly fileName = 'package.json'
-        public readonly folder = __dirname + '/test-data'
+        public readonly folder = __dirname + '/data'
         public readonly targetName = 'test-upload-data (auto-generated)'
         public readonly asset: AssetsGateway.NewAssetResponse<FilesBackend.UploadResponse>
 
@@ -318,7 +318,7 @@ test('upload asset with files', (done) => {
                             },
                             zipPath: path.resolve(
                                 __dirname,
-                                './yw_config/test-add-files.zip',
+                                './data/test-add-files.zip',
                             ),
                         }
                     },
