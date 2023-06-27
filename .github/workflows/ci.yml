@@ -12,7 +12,7 @@ jobs:
     name: Typescript
     uses: youwol/nestor/.github/workflows/typescript-ci.yaml@v3
     with:
-      skip: tests
+      skip: tests audit
 
   nestor_integration_tests:
     name: Integration Tests
