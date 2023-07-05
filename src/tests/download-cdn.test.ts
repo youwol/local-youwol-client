@@ -182,3 +182,33 @@ test(
     },
     20 * 1000,
 )
+
+test('headers when getting CDN resource', (done) => {
+    class Context {}
+    const assetId = window.btoa('rxjs') //'QHlvdXdvbC9jZG4tY2xpZW50'
+    const version = '^6.5.5'
+    const baseUrl = '/api/assets-gateway/cdn-backend/resources'
+    return shell$<Context>(new Context())
+        .pipe(
+            // ensure shell's tearDown in 'afterEach'
+            tap((shell) => (currentShell = shell)),
+            testDownloadPackage(`rxjs#${version}`, 'succeeded'),
+            addBookmarkLog({ text: `rxjs#${version} downloaded successfully` }),
+            mergeMap(() => {
+                return from(
+                    fetch(`${baseUrl}/${assetId}/${version}/dist/rxjs.js`),
+                )
+            }),
+            tap((resp) => {
+                expect(resp.status).toBe(200)
+                expect(resp.headers.get('content-type')).toBe(
+                    'application/javascript;charset=UTF-8',
+                )
+                expect(resp.headers.get('youwol-origin')).toBe('localhost')
+                expect(resp.headers.get('x-trace-id')).toBeTruthy()
+            }),
+        )
+        .subscribe(() => {
+            done()
+        })
+})
