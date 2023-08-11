@@ -13,7 +13,6 @@ jobs:
     uses: youwol/nestor/.github/workflows/typescript-ci.yaml@v3
     with:
       skip: tests
-      acceptedGhsaIds: GHSA-c2qf-rxjj-qqgw
 
   nestor_integration_tests:
     name: Integration Tests
