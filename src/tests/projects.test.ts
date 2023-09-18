@@ -163,6 +163,7 @@ test('pyYouwol.admin.projects.flowStatus', (done) => {
 function run$(
     projectName: string,
     stepId: string,
+    onlySuccess = true,
 ): Observable<PipelineStepStatusResponse> {
     return combineLatest([
         pyYouwol.admin.projects
@@ -174,7 +175,9 @@ function run$(
             .pipe(raiseHTTPErrors()),
         pyYouwol.admin.projects.webSocket.pipelineStepStatus$({ stepId }).pipe(
             map((d) => d.data),
-            filter((message) => message.status == 'OK'),
+            filter((message) => {
+                return onlySuccess ? message.status === 'OK' : true
+            }),
             take(1),
             reduce((acc, e) => [...acc, e], []),
         ),
@@ -249,4 +252,47 @@ test('pyYouwol.admin.projects.runStep new project', (done) => {
         done()
     })
 })
+
+test('pyYouwol.admin.projects.runStep todo-app-js', (done) => {
+    assertBeforeAllFinished()
+    const projectId = btoa(projectTodoAppName)
+    const steps$ = expectPipelineStepEvents$(pyYouwol)
+
+    expectArtifacts$(pyYouwol, projectId)
+    const runs$ = of(0).pipe(
+        mergeMap(() => {
+            return run$(projectTodoAppName, 'init')
+        }),
+        tap((resp) => {
+            expectInitStep(resp)
+        }),
+        mergeMap(() => {
+            return run$(projectTodoAppName, 'build')
+        }),
+        tap((resp) => {
+            expectBuildStep(resp)
+        }),
+        mergeMap(() => {
+            return run$(projectTodoAppName, 'cdn-local', false)
+        }),
+        tap((resp) => {
+            // The publication fails because the test account do not belong to youwol-admin while 'todo-app-js' does.
+            // This is expected.
+            expectPublishLocal(resp, false)
+        }),
+        mergeMap(() => {
+            return expectArtifacts$(pyYouwol, projectId)
+        }),
+        checkAsset({
+            projectId,
+            groupId: btoa('/youwol-users/youwol-devs/youwol-admins'),
+        }),
+    )
+    combineLatest([runs$, steps$]).subscribe(([artifacts, steps]) => {
+        expect(artifacts).toBeTruthy()
+        expect(steps).toBeTruthy()
+        done()
+    })
+})
+
 /* eslint-enable jest/no-done-callback -- re-enable */
