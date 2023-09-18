@@ -4,7 +4,7 @@ import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 
 import { btoa } from 'buffer'
 import { combineLatest, Observable, of } from 'rxjs'
-import { map, mergeMap, reduce, take, tap } from 'rxjs/operators'
+import { filter, map, mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 
 import {
@@ -52,6 +52,7 @@ function assertBeforeAllFinished() {
 }
 
 let newProjectName: string
+let privateGroupId: string
 const projectTodoAppName = '@youwol/todo-app-js'
 beforeAll(async (done) => {
     newProjectName = uniqueProjectName('todo-app-js')
@@ -85,9 +86,16 @@ beforeAll(async (done) => {
                     name: 'purge-downloads',
                 })
             }),
+            mergeMap(() => {
+                return new AssetsGateway.Client().accounts.getSessionDetails$()
+            }),
+            raiseHTTPErrors(),
         )
-        .subscribe(() => {
+        .subscribe((session) => {
             beforeAllDone = true
+            privateGroupId = session.userInfo.groups.find(
+                ({ path }) => path == 'private',
+            ).id
             done()
         })
 })
@@ -243,7 +251,7 @@ test('pyYouwol.admin.projects.runStep new project', (done) => {
         }),
         checkAsset({
             projectId,
-            groupId: 'private_51c42384-3582-494f-8c56-7405b01646ad',
+            groupId: privateGroupId,
         }),
     )
     combineLatest([runs$, steps$]).subscribe(([artifacts, steps]) => {
