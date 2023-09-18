@@ -21,6 +21,7 @@ import {
 import { setup$ } from './local-youwol-test-setup'
 import { PipelineStepStatusResponse } from '../lib/routers/projects'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
+import { AssetsGateway } from '@youwol/http-clients'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -50,10 +51,11 @@ function assertBeforeAllFinished() {
     }
 }
 
-let projectName: string
-
+let newProjectName: string
+let privateGroupId: string
+const projectTodoAppName = '@youwol/todo-app-js'
 beforeAll(async (done) => {
-    projectName = uniqueProjectName('todo-app-js')
+    newProjectName = uniqueProjectName('todo-app-js')
     setup$({
         localOnly: true,
         email: 'int_tests_yw-users@test-user',
@@ -65,7 +67,17 @@ beforeAll(async (done) => {
                     body: {
                         url: 'https://github.com/youwol/todo-app-js.git',
                         branch: 'master',
-                        name: projectName,
+                        name: newProjectName,
+                    },
+                }),
+            ),
+            mergeMap(() =>
+                pyYouwol.admin.customCommands.doPost$({
+                    name: 'clone-project',
+                    body: {
+                        url: 'https://github.com/youwol/todo-app-js.git',
+                        branch: 'master',
+                        name: projectTodoAppName,
                     },
                 }),
             ),
@@ -74,9 +86,16 @@ beforeAll(async (done) => {
                     name: 'purge-downloads',
                 })
             }),
+            mergeMap(() => {
+                return new AssetsGateway.Client().accounts.getSessionDetails$()
+            }),
+            raiseHTTPErrors(),
         )
-        .subscribe(() => {
+        .subscribe((session) => {
             beforeAllDone = true
+            privateGroupId = session.userInfo.groups.find(
+                ({ path }) => path == 'private',
+            ).id
             done()
         })
 })
@@ -93,7 +112,6 @@ afterEach((done) => {
         .subscribe(() => done())
 })
 
-// eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
 test('pyYouwol.admin.projects.status', (done) => {
     assertBeforeAllFinished()
     combineLatest([
@@ -102,8 +120,12 @@ test('pyYouwol.admin.projects.status', (done) => {
     ])
         .pipe(take(1))
         .subscribe(([respHttp, respWs]) => {
-            expectProjectsStatus(respHttp, projectName)
-            expectProjectsStatus(respWs.data, projectName)
+            expect(respHttp.results).toHaveLength(2)
+            expect(respWs.data.results).toHaveLength(2)
+            expectProjectsStatus(respHttp, newProjectName)
+            expectProjectsStatus(respWs.data, newProjectName)
+            expectProjectsStatus(respHttp, projectTodoAppName)
+            expectProjectsStatus(respWs.data, projectTodoAppName)
             // respWs contains more fields than respHttp...e.g. pipeline.target (related to pb with union?)
             // expect(respHttp).toEqual(respWs.data)
             done()
@@ -112,7 +134,7 @@ test('pyYouwol.admin.projects.status', (done) => {
 
 test('pyYouwol.admin.projects.projectStatus', (done) => {
     assertBeforeAllFinished()
-    const projectId = btoa(projectName)
+    const projectId = btoa(newProjectName)
     combineLatest([
         pyYouwol.admin.projects
             .getProjectStatus$({ projectId })
@@ -131,7 +153,7 @@ test('pyYouwol.admin.projects.flowStatus', (done) => {
     combineLatest([
         pyYouwol.admin.projects
             .getPipelineStatus$({
-                projectId: btoa(projectName),
+                projectId: btoa(newProjectName),
                 flowId: 'prod',
             })
             .pipe(raiseHTTPErrors()),
@@ -139,54 +161,97 @@ test('pyYouwol.admin.projects.flowStatus', (done) => {
     ])
         .pipe(take(1))
         .subscribe(([respHttp, respWs]) => {
-            expectFlowStatus(respHttp, projectName)
+            expectFlowStatus(respHttp, newProjectName)
             expectAttributes(respWs.attributes, ['projectId', 'flowId'])
             expect(respHttp).toEqual(respWs.data)
             done()
         })
 })
 
-function run$(stepId: string): Observable<PipelineStepStatusResponse> {
+function run$(
+    projectName: string,
+    stepId: string,
+    onlySuccess = true,
+): Observable<PipelineStepStatusResponse> {
     return combineLatest([
         pyYouwol.admin.projects
-            .runStep$({ projectId: btoa(projectName), flowId: 'prod', stepId })
+            .runStep$({
+                projectId: btoa(projectName),
+                flowId: 'prod',
+                stepId,
+            })
             .pipe(raiseHTTPErrors()),
         pyYouwol.admin.projects.webSocket.pipelineStepStatus$({ stepId }).pipe(
             map((d) => d.data),
-            filter((message) => message.status == 'OK'),
+            filter((message) => {
+                return onlySuccess ? message.status === 'OK' : true
+            }),
             take(1),
             reduce((acc, e) => [...acc, e], []),
         ),
     ]).pipe(map(([_, respWs]) => respWs.find((step) => step.stepId == stepId)))
 }
 
-test('pyYouwol.admin.projects.runStep', (done) => {
+function checkAsset({
+    projectId,
+    groupId,
+}: {
+    projectId: string
+    groupId: string
+}) {
+    return (obs) => {
+        return obs.pipe(
+            mergeMap(() => {
+                const client = new AssetsGateway.Client().assets
+                return client.getAsset$({ assetId: btoa(projectId) })
+            }),
+            raiseHTTPErrors(),
+            tap((resp) => {
+                expect(resp['groupId']).toBe(groupId)
+            }),
+            mergeMap(() => {
+                const client = new AssetsGateway.Client().explorer
+                return client.getItem$({ itemId: btoa(projectId) })
+            }),
+            raiseHTTPErrors(),
+            tap((resp) => {
+                expect(resp['groupId']).toBe(groupId)
+            }),
+        )
+    }
+}
+
+test('pyYouwol.admin.projects.runStep new project', (done) => {
     assertBeforeAllFinished()
-    const projectId = btoa(projectName)
+    const projectId = btoa(newProjectName)
     const steps$ = expectPipelineStepEvents$(pyYouwol)
 
     expectArtifacts$(pyYouwol, projectId)
     const runs$ = of(0).pipe(
         mergeMap(() => {
-            return run$('init')
+            return run$(newProjectName, 'init')
         }),
         tap((resp) => {
             expectInitStep(resp)
         }),
         mergeMap(() => {
-            return run$('build')
+            return run$(newProjectName, 'build')
         }),
         tap((resp) => {
             expectBuildStep(resp)
         }),
         mergeMap(() => {
-            return run$('cdn-local')
+            return run$(newProjectName, 'cdn-local')
         }),
         tap((resp) => {
-            expectPublishLocal(resp)
+            expectPublishLocal(resp, true)
         }),
         mergeMap(() => {
             return expectArtifacts$(pyYouwol, projectId)
+        }),
+        checkAsset({
+            projectId,
+            groupId: privateGroupId,
         }),
     )
     combineLatest([runs$, steps$]).subscribe(([artifacts, steps]) => {
@@ -195,4 +260,47 @@ test('pyYouwol.admin.projects.runStep', (done) => {
         done()
     })
 })
+
+test('pyYouwol.admin.projects.runStep todo-app-js', (done) => {
+    assertBeforeAllFinished()
+    const projectId = btoa(projectTodoAppName)
+    const steps$ = expectPipelineStepEvents$(pyYouwol)
+
+    expectArtifacts$(pyYouwol, projectId)
+    const runs$ = of(0).pipe(
+        mergeMap(() => {
+            return run$(projectTodoAppName, 'init')
+        }),
+        tap((resp) => {
+            expectInitStep(resp)
+        }),
+        mergeMap(() => {
+            return run$(projectTodoAppName, 'build')
+        }),
+        tap((resp) => {
+            expectBuildStep(resp)
+        }),
+        mergeMap(() => {
+            return run$(projectTodoAppName, 'cdn-local', false)
+        }),
+        tap((resp) => {
+            // The publication fails because the test account do not belong to youwol-admin while 'todo-app-js' does.
+            // This is expected.
+            expectPublishLocal(resp, false)
+        }),
+        mergeMap(() => {
+            return expectArtifacts$(pyYouwol, projectId)
+        }),
+        checkAsset({
+            projectId,
+            groupId: btoa('/youwol-users/youwol-devs/youwol-admins'),
+        }),
+    )
+    combineLatest([runs$, steps$]).subscribe(([artifacts, steps]) => {
+        expect(artifacts).toBeTruthy()
+        expect(steps).toBeTruthy()
+        done()
+    })
+})
+
 /* eslint-enable jest/no-done-callback -- re-enable */
