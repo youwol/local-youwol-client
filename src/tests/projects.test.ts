@@ -21,6 +21,7 @@ import {
 import { setup$ } from './local-youwol-test-setup'
 import { PipelineStepStatusResponse } from '../lib/routers/projects'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
+import { AssetsGateway } from '@youwol/http-clients'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -180,6 +181,35 @@ function run$(
     ]).pipe(map(([_, respWs]) => respWs.find((step) => step.stepId == stepId)))
 }
 
+function checkAsset({
+    projectId,
+    groupId,
+}: {
+    projectId: string
+    groupId: string
+}) {
+    return (obs) => {
+        return obs.pipe(
+            mergeMap(() => {
+                const client = new AssetsGateway.Client().assets
+                return client.getAsset$({ assetId: btoa(projectId) })
+            }),
+            raiseHTTPErrors(),
+            tap((resp) => {
+                expect(resp['groupId']).toBe(groupId)
+            }),
+            mergeMap(() => {
+                const client = new AssetsGateway.Client().explorer
+                return client.getItem$({ itemId: btoa(projectId) })
+            }),
+            raiseHTTPErrors(),
+            tap((resp) => {
+                expect(resp['groupId']).toBe(groupId)
+            }),
+        )
+    }
+}
+
 test('pyYouwol.admin.projects.runStep new project', (done) => {
     assertBeforeAllFinished()
     const projectId = btoa(newProjectName)
@@ -207,6 +237,10 @@ test('pyYouwol.admin.projects.runStep new project', (done) => {
         }),
         mergeMap(() => {
             return expectArtifacts$(pyYouwol, projectId)
+        }),
+        checkAsset({
+            projectId,
+            groupId: 'private_51c42384-3582-494f-8c56-7405b01646ad',
         }),
     )
     combineLatest([runs$, steps$]).subscribe(([artifacts, steps]) => {
