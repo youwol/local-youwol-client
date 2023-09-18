@@ -20,7 +20,7 @@ export function expectBuildStep(stepResp) {
     expect(stepResp.artifacts[0].id).toBe('dist')
 }
 
-export function expectPublishLocal(stepResp) {
+export function expectPublishLocal(stepResp, succeeded: boolean) {
     expect(stepResp.manifest).toBeTruthy()
     expectAttributes(stepResp.manifest, [
         'succeeded',
@@ -28,16 +28,18 @@ export function expectPublishLocal(stepResp) {
         'creationDate',
         'cmdOutputs',
     ])
-    expect(stepResp.manifest.succeeded).toBeTruthy()
-    expectAttributes(stepResp.manifest.cmdOutputs, [
-        'name',
-        'version',
-        'id',
-        'fingerprint',
-        'srcFilesFingerprint',
-        'srcBasePath',
-        'srcFiles',
-    ])
+    expect(stepResp.manifest.succeeded).toBe(succeeded)
+    if (succeeded) {
+        expectAttributes(stepResp.manifest.cmdOutputs, [
+            'name',
+            'version',
+            'id',
+            'fingerprint',
+            'srcFilesFingerprint',
+            'srcBasePath',
+            'srcFiles',
+        ])
+    }
 }
 
 export function expectFlowStatus(resp, projectName) {
@@ -52,15 +54,10 @@ export function expectFlowStatus(resp, projectName) {
 }
 
 export function expectProjectsStatus(resp, projectName) {
-    expect(resp.results).toHaveLength(1)
-    expectAttributes(resp.results[0], ['path', 'name', 'version', 'id'])
-    expectAttributes(resp.results[0]['pipeline'], [
-        'target',
-        'tags',
-        'steps',
-        'flows',
-    ])
-    expect(resp.results[0]['name']).toBe(projectName)
+    const project = resp.results.find((p) => p.name == projectName)
+    expectAttributes(project, ['path', 'name', 'version', 'id'])
+    expectAttributes(project['pipeline'], ['target', 'tags', 'steps', 'flows'])
+    expect(project['name']).toBe(projectName)
 }
 
 export function expectProjectStatus(resp) {

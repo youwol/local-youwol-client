@@ -4,7 +4,7 @@ import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 
 import { btoa } from 'buffer'
 import { combineLatest, Observable, of } from 'rxjs'
-import { filter, map, mergeMap, reduce, take, tap } from 'rxjs/operators'
+import { map, mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 
 import {
@@ -50,10 +50,10 @@ function assertBeforeAllFinished() {
     }
 }
 
-let projectName: string
-
+let newProjectName: string
+const projectTodoAppName = '@youwol/todo-app-js'
 beforeAll(async (done) => {
-    projectName = uniqueProjectName('todo-app-js')
+    newProjectName = uniqueProjectName('todo-app-js')
     setup$({
         localOnly: true,
         email: 'int_tests_yw-users@test-user',
@@ -65,7 +65,17 @@ beforeAll(async (done) => {
                     body: {
                         url: 'https://github.com/youwol/todo-app-js.git',
                         branch: 'master',
-                        name: projectName,
+                        name: newProjectName,
+                    },
+                }),
+            ),
+            mergeMap(() =>
+                pyYouwol.admin.customCommands.doPost$({
+                    name: 'clone-project',
+                    body: {
+                        url: 'https://github.com/youwol/todo-app-js.git',
+                        branch: 'master',
+                        name: projectTodoAppName,
                     },
                 }),
             ),
@@ -93,7 +103,6 @@ afterEach((done) => {
         .subscribe(() => done())
 })
 
-// eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
 test('pyYouwol.admin.projects.status', (done) => {
     assertBeforeAllFinished()
     combineLatest([
@@ -102,8 +111,12 @@ test('pyYouwol.admin.projects.status', (done) => {
     ])
         .pipe(take(1))
         .subscribe(([respHttp, respWs]) => {
-            expectProjectsStatus(respHttp, projectName)
-            expectProjectsStatus(respWs.data, projectName)
+            expect(respHttp.results).toHaveLength(2)
+            expect(respWs.data.results).toHaveLength(2)
+            expectProjectsStatus(respHttp, newProjectName)
+            expectProjectsStatus(respWs.data, newProjectName)
+            expectProjectsStatus(respHttp, projectTodoAppName)
+            expectProjectsStatus(respWs.data, projectTodoAppName)
             // respWs contains more fields than respHttp...e.g. pipeline.target (related to pb with union?)
             // expect(respHttp).toEqual(respWs.data)
             done()
@@ -112,7 +125,7 @@ test('pyYouwol.admin.projects.status', (done) => {
 
 test('pyYouwol.admin.projects.projectStatus', (done) => {
     assertBeforeAllFinished()
-    const projectId = btoa(projectName)
+    const projectId = btoa(newProjectName)
     combineLatest([
         pyYouwol.admin.projects
             .getProjectStatus$({ projectId })
@@ -131,7 +144,7 @@ test('pyYouwol.admin.projects.flowStatus', (done) => {
     combineLatest([
         pyYouwol.admin.projects
             .getPipelineStatus$({
-                projectId: btoa(projectName),
+                projectId: btoa(newProjectName),
                 flowId: 'prod',
             })
             .pipe(raiseHTTPErrors()),
@@ -139,17 +152,24 @@ test('pyYouwol.admin.projects.flowStatus', (done) => {
     ])
         .pipe(take(1))
         .subscribe(([respHttp, respWs]) => {
-            expectFlowStatus(respHttp, projectName)
+            expectFlowStatus(respHttp, newProjectName)
             expectAttributes(respWs.attributes, ['projectId', 'flowId'])
             expect(respHttp).toEqual(respWs.data)
             done()
         })
 })
 
-function run$(stepId: string): Observable<PipelineStepStatusResponse> {
+function run$(
+    projectName: string,
+    stepId: string,
+): Observable<PipelineStepStatusResponse> {
     return combineLatest([
         pyYouwol.admin.projects
-            .runStep$({ projectId: btoa(projectName), flowId: 'prod', stepId })
+            .runStep$({
+                projectId: btoa(projectName),
+                flowId: 'prod',
+                stepId,
+            })
             .pipe(raiseHTTPErrors()),
         pyYouwol.admin.projects.webSocket.pipelineStepStatus$({ stepId }).pipe(
             map((d) => d.data),
@@ -160,30 +180,30 @@ function run$(stepId: string): Observable<PipelineStepStatusResponse> {
     ]).pipe(map(([_, respWs]) => respWs.find((step) => step.stepId == stepId)))
 }
 
-test('pyYouwol.admin.projects.runStep', (done) => {
+test('pyYouwol.admin.projects.runStep new project', (done) => {
     assertBeforeAllFinished()
-    const projectId = btoa(projectName)
+    const projectId = btoa(newProjectName)
     const steps$ = expectPipelineStepEvents$(pyYouwol)
 
     expectArtifacts$(pyYouwol, projectId)
     const runs$ = of(0).pipe(
         mergeMap(() => {
-            return run$('init')
+            return run$(newProjectName, 'init')
         }),
         tap((resp) => {
             expectInitStep(resp)
         }),
         mergeMap(() => {
-            return run$('build')
+            return run$(newProjectName, 'build')
         }),
         tap((resp) => {
             expectBuildStep(resp)
         }),
         mergeMap(() => {
-            return run$('cdn-local')
+            return run$(newProjectName, 'cdn-local')
         }),
         tap((resp) => {
-            expectPublishLocal(resp)
+            expectPublishLocal(resp, true)
         }),
         mergeMap(() => {
             return expectArtifacts$(pyYouwol, projectId)
