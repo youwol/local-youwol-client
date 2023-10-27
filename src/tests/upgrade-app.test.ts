@@ -16,7 +16,7 @@ import {
 } from '@youwol/http-primitives'
 import { map, mergeMap, reduce, takeWhile, tap } from 'rxjs/operators'
 import { forkJoin, merge, of, ReplaySubject } from 'rxjs'
-import { uploadPackages } from './utils'
+import { uploadPackagesAndCheck$ } from './utils'
 import path from 'path'
 
 jest.setTimeout(100 * 1000)
@@ -35,12 +35,15 @@ const versions = [
     '1.1.1',
 ]
 const filePaths = (versions: string[]) =>
-    versions.map((version) => {
-        return path.resolve(
-            __dirname,
-            `./data/test-packages/todo-app-js-test#${version}.zip`,
-        )
-    })
+    versions.reduce((acc, version) => {
+        return {
+            ...acc,
+            [version]: path.resolve(
+                __dirname,
+                `./data/test-packages/todo-app-js-test#${version}.zip`,
+            ),
+        }
+    }, {}) as { [k: string]: string }
 
 beforeAll((done) => {
     const cdnClient = new CdnBackend.Client({
@@ -65,29 +68,32 @@ beforeAll((done) => {
                     if (respCdn.status !== 404) {
                         throw `Unexpected error code while getting library info ${respCdn.status}`
                     }
-                    return uploadPackages({
-                        filePaths: filePaths(versions),
+                    return uploadPackagesAndCheck$({
+                        packageName,
+                        paths: filePaths(versions),
                         folderId: respDrive.homeFolderId,
                         cdnClient,
+                        check: 'strict',
                     })
                 }
-                const missing = versions.filter(
+                const missingVersions = versions.filter(
                     (v) => !respCdn.versions.includes(v),
                 )
-                if (missing.length > 0) {
-                    return uploadPackages({
-                        filePaths: filePaths(missing),
-                        folderId: respDrive.homeFolderId,
-                        cdnClient,
-                    })
-                }
-                if (missing.length === 0) {
+
+                if (missingVersions.length === 0) {
                     console.log(
-                        `All required versions of ${packageName}`,
+                        `All required versions of ${packageName} available in remote`,
                         respCdn.versions,
                     )
+                    return of(respCdn)
                 }
-                return of(respCdn)
+                return uploadPackagesAndCheck$({
+                    packageName,
+                    paths: filePaths(missingVersions),
+                    folderId: respDrive.homeFolderId,
+                    cdnClient,
+                    check: 'loose',
+                })
             }),
         )
         .subscribe(() => {
@@ -134,10 +140,12 @@ function expectTestUpgrade({
         tap((shell: Shell<Context>) => (currentShell = shell)),
         mergeMap((shell) => {
             return installVersion
-                ? uploadPackages({
-                      filePaths: filePaths([installVersion]),
+                ? uploadPackagesAndCheck$({
+                      packageName,
+                      paths: filePaths([installVersion]),
                       folderId: shell.homeFolderId,
                       cdnClient: localCdnClient,
+                      check: 'strict',
                   }).pipe(map(() => shell))
                 : of(shell)
         }),
