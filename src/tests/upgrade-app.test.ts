@@ -129,15 +129,26 @@ function expectTestUpgrade({
     const downloadEvents$ = new ReplaySubject()
     const packageEvents$ = new ReplaySubject()
 
-    pyYouwol.admin.system.webSocket.downloadEvent$().subscribe((d) => {
-        downloadEvents$.next(d)
-    })
-    pyYouwol.admin.localCdn.webSocket.packageEvent$().subscribe((d) => {
-        packageEvents$.next(d)
-    })
-
     return shell$<Context>(new Context()).pipe(
-        tap((shell: Shell<Context>) => (currentShell = shell)),
+        tap((shell) => {
+            currentShell = shell
+            shell.addSubscription(
+                'downloadEvents$',
+                pyYouwol.admin.system.webSocket
+                    .downloadEvent$()
+                    .subscribe((d) => {
+                        downloadEvents$.next(d)
+                    }),
+            )
+            shell.addSubscription(
+                'packageEvents$',
+                pyYouwol.admin.localCdn.webSocket
+                    .packageEvent$()
+                    .subscribe((d) => {
+                        packageEvents$.next(d)
+                    }),
+            )
+        }),
         mergeMap((shell) => {
             return installVersion
                 ? uploadPackagesAndCheck$({
