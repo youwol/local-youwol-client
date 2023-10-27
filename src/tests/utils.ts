@@ -1,7 +1,9 @@
 import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
-import { combineLatest } from 'rxjs'
-import { map, reduce, take, tap } from 'rxjs/operators'
+import { combineLatest, forkJoin } from 'rxjs'
+import { map, mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
+import { readFileSync } from 'fs'
+import { CdnBackend } from '@youwol/http-clients'
 
 export function uniqueProjectName(prefix: string) {
     const now = new Date()
@@ -154,6 +156,88 @@ export function expectDownloadEvents$(pyYouwol: PyYouwolClient) {
                 'updateCheckStarted',
                 'updateCheckDone',
             ])
+        }),
+    )
+}
+
+export function uploadPackages({
+    filePaths,
+    folderId,
+    cdnClient,
+}: {
+    filePaths: string[]
+    folderId: string
+    cdnClient: CdnBackend.Client
+}) {
+    const obs$ = filePaths.map((filePath) => {
+        const buffer = readFileSync(filePath)
+        const filename = filePath.split('/').slice(-1)[0]
+        const arraybuffer = Uint8Array.from(buffer).buffer
+        return cdnClient
+            .upload$({
+                body: {
+                    fileName: filename,
+                    blob: new Blob([arraybuffer]),
+                },
+                queryParameters: { folderId },
+            })
+            .pipe(raiseHTTPErrors(), take(1))
+    })
+    return forkJoin(obs$)
+}
+
+export function uploadPackagesAndCheck$({
+    packageName,
+    paths,
+    folderId,
+    cdnClient,
+    check,
+}: {
+    packageName: string
+    paths: { [_k: string]: string } // version -> path
+    folderId: string
+    cdnClient: CdnBackend.Client
+    check: 'strict' | 'loose'
+}) {
+    const versions = Object.keys(paths)
+    return uploadPackages({
+        filePaths: Object.values(paths),
+        folderId: folderId,
+        cdnClient,
+    }).pipe(
+        mergeMap(() =>
+            cdnClient.getLibraryInfo$({
+                libraryId: window.btoa(packageName),
+            }),
+        ),
+        raiseHTTPErrors(),
+        tap((resp) => {
+            const missing = versions.filter((v) => !resp.versions.includes(v))
+            if (missing.length > 0) {
+                throw Error(
+                    `uploadPackagesAndCheck$: Not all requested versions have been actually published, 
+                    missing versions are: ${missing}`,
+                )
+            }
+            if (
+                check == 'strict' &&
+                JSON.stringify(resp.versions.sort()) !==
+                    JSON.stringify(versions.sort())
+            ) {
+                console.error(
+                    `Some unexpected versions of ${packageName} are available in CDN`,
+                    {
+                        deployed: resp.versions.sort(),
+                        local: versions.sort(),
+                        unexpected: resp.versions.filter(
+                            (v) => !versions.includes(v),
+                        ),
+                    },
+                )
+                throw Error(
+                    `uploadPackagesAndCheck$: Some unexpected versions of ${packageName} are available in CDN`,
+                )
+            }
         }),
     )
 }

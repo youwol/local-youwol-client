@@ -6,9 +6,14 @@ import { install } from '@youwol/cdn-client'
 import { combineLatest, from, of } from 'rxjs'
 import { mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
-import { expectDownloadEvents$, expectUpdateStatus } from './utils'
+import {
+    expectDownloadEvents$,
+    expectUpdateStatus,
+    uploadPackagesAndCheck$,
+} from './utils'
 import { setup$ } from './local-youwol-test-setup'
-import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
+import { applyTestCtxLabels, resetTestCtxLabels, shell$ } from './shell'
+import path from 'path'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -194,6 +199,40 @@ test('download', (done) => {
         .subscribe((respWs) => {
             expect(respWs).toBeTruthy()
             expectUpdateStatus(respWs.data)
+        })
+})
+
+// eslint-disable-next-line jest/expect-expect -- expectation factorized in uploadPackagesAndCheck$
+test('publish versions with -wip or not', (done) => {
+    const resolvePath = (version: string) => {
+        return path.resolve(
+            __dirname,
+            `./data/test-packages/todo-app-js-test#${version}.zip`,
+        )
+    }
+    class Context {
+        paths = {
+            '0.0.1': resolvePath('0.0.1'),
+            '0.0.1-wip': resolvePath('0.0.1-wip'),
+            '0.0.2': resolvePath('0.0.2'),
+            '1.1.1': resolvePath('1.1.1'),
+        }
+    }
+
+    return shell$<Context>(new Context())
+        .pipe(
+            mergeMap((shell) => {
+                return uploadPackagesAndCheck$({
+                    packageName: '@youwol/todo-app-js-test',
+                    paths: shell.context.paths,
+                    folderId: shell.homeFolderId,
+                    check: 'strict',
+                    cdnClient: new AssetsGateway.Client().cdn,
+                })
+            }),
+        )
+        .subscribe(() => {
+            done()
         })
 })
 
