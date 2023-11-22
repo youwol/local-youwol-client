@@ -54,13 +54,13 @@ const entries = {
 export const setup = {
     name:'@youwol/local-youwol-client',
         assetId:'QHlvdXdvbC9sb2NhbC15b3V3b2wtY2xpZW50',
-    version:'0.1.6',
+    version:'0.2.0-wip',
     shortDescription:"Client for local py-youwol",
     developerDocumentation:'https://platform.youwol.com/applications/@youwol/cdn-explorer/latest?package=@youwol/local-youwol-client&tab=doc',
     npmPackage:'https://www.npmjs.com/package/@youwol/local-youwol-client',
     sourceGithub:'https://github.com/youwol/local-youwol-client',
     userGuide:'https://l.youwol.com/doc/@youwol/local-youwol-client',
-    apiVersion:'01',
+    apiVersion:'02',
     runTimeDependencies,
     externals,
     exportedSymbols,
@@ -85,7 +85,7 @@ export const setup = {
             modules,
             scripts,
         }).then(() => {
-            return window[`@youwol/local-youwol-client_APIv01`]
+            return window[`@youwol/local-youwol-client_APIv02`]
         })
     },
     installAuxiliaryModule: ({name, cdnClient, installParameters}:{
@@ -100,7 +100,7 @@ export const setup = {
         const parameters = installParameters || {}
         const scripts = [
             ...(parameters.scripts || []),
-            `@youwol/local-youwol-client#0.1.6~dist/@youwol/local-youwol-client/${entry.name}.js`
+            `@youwol/local-youwol-client#0.2.0-wip~dist/@youwol/local-youwol-client/${entry.name}.js`
         ]
         const modules = [
             ...(parameters.modules || []),
@@ -111,7 +111,7 @@ export const setup = {
             modules,
             scripts,
         }).then(() => {
-            return window[`@youwol/local-youwol-client/${entry.name}_APIv01`]
+            return window[`@youwol/local-youwol-client/${entry.name}_APIv02`]
         })
     },
     getCdnDependencies(name?: string){
