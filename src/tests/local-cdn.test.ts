@@ -2,7 +2,7 @@
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { AssetsGateway } from '@youwol/http-clients'
 
-import { install } from '@youwol/cdn-client'
+import { install } from '@youwol/webpm-client'
 import { combineLatest, from, of } from 'rxjs'
 import { mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'

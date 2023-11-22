@@ -20,14 +20,14 @@ template = Template(
     dependencies=Dependencies(
         runTime=RunTimeDeps(
             externals={
-                "@youwol/http-primitives": "^0.1.1",
-                "rxjs": "^6.5.5"
+                "@youwol/http-primitives": "^0.2.0",
+                "rxjs": "^7.5.6"
             }
         ),
         devTime={
             "jest-jasmine2": "^29.3.1",
-            "@youwol/cdn-client": "^1.0.4",
-            "@youwol/http-clients": "^2.0.2",
+            "@youwol/webpm-client": "^3.0.0",
+            "@youwol/http-clients": "^3.0.0",
             "adm-zip": "^0.5.9"
         }
     ),
@@ -46,8 +46,15 @@ shutil.copyfile(
     src=folder_path / '.template' / 'src' / 'auto-generated.ts',
     dst=folder_path / 'src' / 'auto-generated.ts'
 )
-for file in ['README.md', '.npmignore', '.prettierignore', 'LICENSE', 'package.json',
-             'tsconfig.json', 'webpack.config.ts']:
+for file in [
+    'README.md',
+    '.npmignore',
+    '.prettierignore',
+    'LICENSE',
+    'package.json',
+    # 'tsconfig.json',  references `rx-vdom-config.ts`
+    'webpack.config.ts'
+]:
     shutil.copyfile(
         src=folder_path / '.template' / file,
         dst=folder_path / file

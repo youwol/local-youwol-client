@@ -1,7 +1,7 @@
 {
     "name": "@youwol/local-youwol-client",
     "description": "Client for local py-youwol",
-    "version": "0.1.6",
+    "version": "0.2.1-wip",
     "author": "greinisch@youwol.com",
     "homepage": "https://github.com/youwol/local-youwol-client#README.md",
     "main": "dist/@youwol/local-youwol-client.js",
@@ -28,13 +28,13 @@
         ]
     },
     "dependencies": {
-        "@youwol/http-primitives": "^0.1.1",
-        "rxjs": "^6.5.5"
+        "@youwol/http-primitives": "^0.2.0",
+        "rxjs": "^7.5.6"
     },
     "devDependencies": {
         "jest-jasmine2": "^29.3.1",
-        "@youwol/cdn-client": "^1.0.4",
-        "@youwol/http-clients": "^2.0.2",
+        "@youwol/webpm-client": "^3.0.0",
+        "@youwol/http-clients": "^3.0.0",
         "adm-zip": "^0.5.9",
         "@types/jest": "^29.5.6",
         "@types/node": "^18.9.1",
@@ -45,18 +45,18 @@
         "@youwol/tsconfig": "1.0.0",
         "del-cli": "^5.1.0",
         "isomorphic-fetch": "^3.0.0",
-        "ts-loader": "^9.5.0",
-        "ts-node": "^10.9.1",
+        "ts-loader": "9.5.0",
+        "ts-node": "10.9.1",
         "typedoc": "^0.25.2",
-        "typescript": "^5.2.2",
+        "typescript": "5.2.2",
         "webpack": "^5.89.0",
         "webpack-bundle-analyzer": "^4.9.1",
         "webpack-cli": "5.1.4"
     },
     "webpm": {
         "dependencies": {
-            "@youwol/http-primitives": "^0.1.1",
-            "rxjs": "^6.5.5"
+            "@youwol/http-primitives": "^0.2.0",
+            "rxjs": "^7.5.6"
         },
         "aliases": []
     }
