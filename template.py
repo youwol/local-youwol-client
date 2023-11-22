@@ -52,7 +52,7 @@ for file in [
     '.prettierignore',
     'LICENSE',
     'package.json',
-    'tsconfig.json',  # references `rx-vdom-config.ts`
+    # 'tsconfig.json',  references `rx-vdom-config.ts`
     'webpack.config.ts'
 ]:
     shutil.copyfile(
