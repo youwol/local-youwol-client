@@ -4,7 +4,7 @@ import { from, Observable, ReplaySubject } from 'rxjs'
 import { PyYouwolClient } from '../lib'
 import { DownloadEvent } from '../lib/routers/system'
 import { mergeMap, tap } from 'rxjs/operators'
-import { install, State } from '@youwol/cdn-client'
+import { install, State } from '@youwol/webpm-client'
 import {
     GetCdnStatusResponse,
     ResetCdnResponse,
@@ -107,7 +107,7 @@ test(
                 resetCdn({
                     sideEffects: (resp: ResetCdnResponse) => {
                         expect(resp.deletedPackages).toEqual(['rxjs'])
-                        State.resetCache()
+                        State.clear()
                     },
                 }),
                 getCdnStatus({
