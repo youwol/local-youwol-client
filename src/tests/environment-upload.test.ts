@@ -1,6 +1,3 @@
-// eslint-disable-next-line eslint-comments/disable-enable-pair -- to not have problem
-/* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
-
 import {
     AssetsGateway,
     FluxBackend,
@@ -29,31 +26,27 @@ import {
     applyTestCtxLabels,
     resetTestCtxLabels,
 } from './shell'
-import { Observable, of } from 'rxjs'
+import { firstValueFrom, Observable, of } from 'rxjs'
 import path from 'path'
 import { setup$ } from './local-youwol-test-setup'
 import { NewAssetResponse } from '@youwol/http-clients/src/lib/assets-gateway'
 
 jest.setTimeout(20 * 1000)
-beforeAll(async (done) => {
-    setup$({
-        localOnly: false,
-        email: 'int_tests_yw-users@test-user',
-    }).subscribe(() => {
-        done()
-    })
+beforeAll(async () => {
+    await firstValueFrom(
+        setup$({
+            localOnly: false,
+            email: 'int_tests_yw-users@test-user',
+        }),
+    )
 })
 
-beforeEach((done) => {
-    of(undefined)
-        .pipe(applyTestCtxLabels())
-        .subscribe(() => done())
+beforeEach(async () => {
+    await firstValueFrom(of(undefined).pipe(applyTestCtxLabels()))
 })
 
-afterEach((done) => {
-    of(undefined)
-        .pipe(resetTestCtxLabels())
-        .subscribe(() => done())
+afterEach(async () => {
+    await firstValueFrom(of(undefined).pipe(resetTestCtxLabels()))
 })
 
 interface UploadContext {
@@ -124,7 +117,7 @@ function uploadTest<TContext extends UploadContext>({
     }
 }
 
-test('upload flux project', (done) => {
+test('upload flux project', async () => {
     class Context implements UploadContext {
         public readonly projectName =
             'test-upload-flux-project (auto-generated)'
@@ -138,43 +131,40 @@ test('upload flux project', (done) => {
             Object.assign(this, params)
         }
     }
-    shell$(new Context())
-        .pipe(
-            uploadTest({
-                createOperator: newProjectFlux<Context>(
-                    (shell) => ({
-                        queryParameters: { folderId: shell.homeFolderId },
-                        body: { name: shell.context.projectName },
-                    }),
-                    {
-                        newShell: (
-                            shell,
-                            resp: AssetsGateway.NewAssetResponse<FluxBackend.NewProjectResponse>,
-                        ) =>
-                            newShell(shell, resp, (shell, resp) => ({
-                                ...shell.context,
-                                asset: resp,
-                            })),
+    const test$ = shell$(new Context()).pipe(
+        uploadTest({
+            createOperator: newProjectFlux<Context>(
+                (shell) => ({
+                    queryParameters: { folderId: shell.homeFolderId },
+                    body: { name: shell.context.projectName },
+                }),
+                {
+                    newShell: (
+                        shell,
+                        resp: AssetsGateway.NewAssetResponse<FluxBackend.NewProjectResponse>,
+                    ) =>
+                        newShell(shell, resp, (shell, resp) => ({
+                            ...shell.context,
+                            asset: resp,
+                        })),
+                },
+            ),
+            getRawOperator: getProjectFlux<Context>(
+                (shell) => ({
+                    projectId: shell.context.asset.rawId,
+                }),
+                {
+                    sideEffects: (resp) => {
+                        expect(resp).toBeTruthy()
                     },
-                ),
-                getRawOperator: getProjectFlux<Context>(
-                    (shell) => ({
-                        projectId: shell.context.asset.rawId,
-                    }),
-                    {
-                        sideEffects: (resp) => {
-                            expect(resp).toBeTruthy()
-                        },
-                    },
-                ),
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+                },
+            ),
+        }),
+    )
+    await firstValueFrom(test$)
 })
 
-test('upload story', (done) => {
+test('upload story', async () => {
     class Context implements UploadContext {
         public readonly storyName = 'test-upload-story (auto-generated)'
         asset: AssetsGateway.NewAssetResponse<StoriesBackend.CreateStoryResponse>
@@ -187,42 +177,40 @@ test('upload story', (done) => {
             Object.assign(this, params)
         }
     }
-    shell$(new Context())
-        .pipe(
-            uploadTest({
-                createOperator: newStory<Context>(
-                    (shell) => ({
-                        queryParameters: { folderId: shell.homeFolderId },
-                        body: { title: shell.context.storyName },
-                    }),
-                    {
-                        newShell: (shell, resp) =>
-                            newShell(shell, resp, (shell, resp) => ({
-                                ...shell.context,
-                                asset: resp,
-                            })),
+    const test$ = shell$(new Context()).pipe(
+        uploadTest({
+            createOperator: newStory<Context>(
+                (shell) => ({
+                    queryParameters: { folderId: shell.homeFolderId },
+                    body: { title: shell.context.storyName },
+                }),
+                {
+                    newShell: (shell, resp) =>
+                        newShell(shell, resp, (shell, resp) => ({
+                            ...shell.context,
+                            asset: resp,
+                        })),
+                },
+            ),
+            getRawOperator: getStory<Context>(
+                (shell) => {
+                    return {
+                        storyId: shell.context.asset.rawId,
+                    }
+                },
+                {
+                    sideEffects: (resp) => {
+                        expect(resp).toBeTruthy()
                     },
-                ),
-                getRawOperator: getStory<Context>(
-                    (shell) => {
-                        return {
-                            storyId: shell.context.asset.rawId,
-                        }
-                    },
-                    {
-                        sideEffects: (resp) => {
-                            expect(resp).toBeTruthy()
-                        },
-                    },
-                ),
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+                },
+            ),
+        }),
+    )
+
+    await firstValueFrom(test$)
 })
 
-test('upload data', (done) => {
+test('upload data', async () => {
     class Context implements UploadContext {
         public readonly fileName = 'package.json'
         public readonly folder = __dirname + '/data'
@@ -238,52 +226,50 @@ test('upload data', (done) => {
         }
     }
 
-    shell$(new Context())
-        .pipe(
-            uploadTest<Context>({
-                createOperator: upload<Context>({
-                    inputs: (shell) => {
-                        return {
-                            body: {
-                                fileName: shell.context.targetName,
-                                path: path.resolve(
-                                    shell.context.folder,
-                                    shell.context.fileName,
-                                ),
-                            },
-                            queryParameters: { folderId: shell.homeFolderId },
-                        }
-                    },
-                    newContext: (
-                        shell,
-                        resp: AssetsGateway.NewAssetResponse<FilesBackend.UploadResponse>,
-                    ) => {
-                        return new Context({
-                            ...shell.context,
-                            asset: resp,
-                        })
-                    },
-                }),
-                getRawOperator: getFileInfo<Context>(
-                    (shell) => {
-                        return {
-                            fileId: shell.context.asset.rawId,
-                        }
-                    },
-                    {
-                        sideEffects: (resp) => {
-                            expect(resp).toBeTruthy()
+    const test$ = shell$(new Context()).pipe(
+        uploadTest<Context>({
+            createOperator: upload<Context>({
+                inputs: (shell) => {
+                    return {
+                        body: {
+                            fileName: shell.context.targetName,
+                            path: path.resolve(
+                                shell.context.folder,
+                                shell.context.fileName,
+                            ),
                         },
-                    },
-                ),
+                        queryParameters: { folderId: shell.homeFolderId },
+                    }
+                },
+                newContext: (
+                    shell,
+                    resp: AssetsGateway.NewAssetResponse<FilesBackend.UploadResponse>,
+                ) => {
+                    return new Context({
+                        ...shell.context,
+                        asset: resp,
+                    })
+                },
             }),
-        )
-        .subscribe(() => {
-            done()
-        })
+            getRawOperator: getFileInfo<Context>(
+                (shell) => {
+                    return {
+                        fileId: shell.context.asset.rawId,
+                    }
+                },
+                {
+                    sideEffects: (resp) => {
+                        expect(resp).toBeTruthy()
+                    },
+                },
+            ),
+        }),
+    )
+
+    await firstValueFrom(test$)
 })
 
-test('upload asset with files', (done) => {
+test('upload asset with files', async () => {
     class Context implements UploadContext {
         public readonly asset: NewAssetResponse<Record<string, never>>
 
@@ -296,56 +282,51 @@ test('upload asset with files', (done) => {
         }
     }
 
-    shell$(new Context())
-        .pipe(
-            uploadTest<Context>({
-                createOperator: createAssetWithFiles(
-                    (shell) => {
-                        return {
-                            body: {
-                                kind: 'custom-asset',
-                                rawId: 'upload-asset-with-files',
-                                name: 'Upload asset with files (upload test in local-youwol-client)',
-                                description:
-                                    'A custom asset used to test uploading asset with files',
-                                tags: [
-                                    'integration-test',
-                                    'local-youwol-client',
-                                ],
-                            },
-                            queryParameters: {
-                                folderId: shell.homeFolderId,
-                            },
-                            zipPath: path.resolve(
-                                __dirname,
-                                './data/test-add-files.zip',
-                            ),
-                        }
-                    },
-                    {
-                        newShell: (shell: Shell<Context>, resp) => {
-                            return newShell(shell, resp, (shell, resp) => ({
-                                ...shell.context,
-                                asset: resp,
-                            }))
+    const test$ = shell$(new Context()).pipe(
+        uploadTest<Context>({
+            createOperator: createAssetWithFiles(
+                (shell) => {
+                    return {
+                        body: {
+                            kind: 'custom-asset',
+                            rawId: 'upload-asset-with-files',
+                            name: 'Upload asset with files (upload test in local-youwol-client)',
+                            description:
+                                'A custom asset used to test uploading asset with files',
+                            tags: ['integration-test', 'local-youwol-client'],
                         },
-                    },
-                ),
-                getRawOperator: getAssetZipFiles<Context>(
-                    (shell) => {
-                        return {
-                            assetId: shell.context.asset.assetId,
-                        }
-                    },
-                    {
-                        sideEffects: (resp) => {
-                            expect(resp).toBeTruthy()
+                        queryParameters: {
+                            folderId: shell.homeFolderId,
                         },
+                        zipPath: path.resolve(
+                            __dirname,
+                            './data/test-add-files.zip',
+                        ),
+                    }
+                },
+                {
+                    newShell: (shell: Shell<Context>, resp) => {
+                        return newShell(shell, resp, (shell, resp) => ({
+                            ...shell.context,
+                            asset: resp,
+                        }))
                     },
-                ),
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+                },
+            ),
+            getRawOperator: getAssetZipFiles<Context>(
+                (shell) => {
+                    return {
+                        assetId: shell.context.asset.assetId,
+                    }
+                },
+                {
+                    sideEffects: (resp) => {
+                        expect(resp).toBeTruthy()
+                    },
+                },
+            ),
+        }),
+    )
+
+    await firstValueFrom(test$)
 })

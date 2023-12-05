@@ -1,7 +1,5 @@
-/* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
-
 import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
-import { combineLatest, of } from 'rxjs'
+import { combineLatest, firstValueFrom, of } from 'rxjs'
 import { mergeMap, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
@@ -10,102 +8,84 @@ import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
-beforeAll(async (done) => {
-    setup$({
-        localOnly: true,
-        email: 'int_tests_yw-users@test-user',
-    }).subscribe(() => {
-        done()
-    })
+beforeAll(async () => {
+    await firstValueFrom(
+        setup$({
+            localOnly: true,
+            email: 'int_tests_yw-users@test-user',
+        }),
+    )
 })
 
-beforeEach((done) => {
-    of(undefined)
-        .pipe(applyTestCtxLabels())
-        .subscribe(() => done())
+beforeEach(async () => {
+    await firstValueFrom(of(undefined).pipe(applyTestCtxLabels()))
 })
 
-afterEach((done) => {
-    of(undefined)
-        .pipe(resetTestCtxLabels())
-        .subscribe(() => done())
+afterEach(async () => {
+    await firstValueFrom(of(undefined).pipe(resetTestCtxLabels()))
 })
 
-test('pyYouwol.admin.environment.login', (done) => {
-    pyYouwol.admin.environment
+test('pyYouwol.admin.environment.login', async () => {
+    const test$ = pyYouwol.admin.environment
         .login$({
             body: { authId: 'int_tests_yw-users_bis@test-user', envId: 'prod' },
         })
         .pipe(raiseHTTPErrors())
-        .subscribe((resp) => {
-            expectAttributes(resp, ['id', 'name', 'email', 'memberOf'])
-            expect(resp.name).toBe('int_tests_yw-users_bis@test-user')
-            done()
-        })
+    const resp = await firstValueFrom(test$)
+    expectAttributes(resp, ['id', 'name', 'email', 'memberOf'])
+    expect(resp.name).toBe('int_tests_yw-users_bis@test-user')
 })
 
-test('pyYouwol.admin.environment.status', (done) => {
-    combineLatest([
+test('pyYouwol.admin.environment.status', async () => {
+    const test$ = combineLatest([
         pyYouwol.admin.environment.getStatus$().pipe(raiseHTTPErrors()),
         pyYouwol.admin.environment.webSocket.status$(),
-    ])
-        .pipe(
-            take(1),
-            tap(([respHttp, respWs]) => {
-                expectEnvironment(respHttp)
-                expect(respHttp).toEqual(respWs.data)
-            }),
-            mergeMap(() => {
-                return pyYouwol.admin.environment.queryCowSay$()
-            }),
-            raiseHTTPErrors(),
-            tap((resp) => {
-                expect(typeof resp).toBe('string')
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+    ]).pipe(
+        take(1),
+        tap(([respHttp, respWs]) => {
+            expectEnvironment(respHttp)
+            expect(respHttp).toEqual(respWs.data)
+        }),
+        mergeMap(() => {
+            return pyYouwol.admin.environment.queryCowSay$()
+        }),
+        raiseHTTPErrors(),
+        tap((resp) => {
+            expect(typeof resp).toBe('string')
+        }),
+    )
+    await firstValueFrom(test$)
 })
 
-test('pyYouwol.admin.environment.reloadConfig', (done) => {
-    combineLatest([
+test('pyYouwol.admin.environment.reloadConfig', async () => {
+    const test$ = combineLatest([
         pyYouwol.admin.environment.reloadConfig$().pipe(raiseHTTPErrors()),
         pyYouwol.admin.environment.webSocket.status$(),
-    ])
-        .pipe(
-            take(1),
-            tap(([respHttp, respWs]) => {
-                expectEnvironment(respHttp)
-                expectEnvironment(respWs.data)
-            }),
-            mergeMap(() => {
-                return pyYouwol.admin.environment.getFileContent$()
-            }),
-            raiseHTTPErrors(),
-            tap((resp) => {
-                expect(typeof resp).toBe('string')
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+    ]).pipe(
+        take(1),
+        tap(([respHttp, respWs]) => {
+            expectEnvironment(respHttp)
+            expectEnvironment(respWs.data)
+        }),
+        mergeMap(() => {
+            return pyYouwol.admin.environment.getFileContent$()
+        }),
+        raiseHTTPErrors(),
+        tap((resp) => {
+            expect(typeof resp).toBe('string')
+        }),
+    )
+    await firstValueFrom(test$)
 })
 
-test('pyYouwol.admin.environment.customDispatches', (done) => {
-    pyYouwol.admin.environment
-        .queryCustomDispatches$()
-        .pipe(
-            raiseHTTPErrors(),
-            tap((resp) => {
-                expectAttributes(resp, ['dispatches'])
-                expectAttributes(resp.dispatches, ['CDN live servers'])
-                expect(resp.dispatches['CDN live servers']).toHaveLength(1)
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+test('pyYouwol.admin.environment.customDispatches', async () => {
+    const test$ = pyYouwol.admin.environment.queryCustomDispatches$().pipe(
+        raiseHTTPErrors(),
+        tap((resp) => {
+            expectAttributes(resp, ['dispatches'])
+            expectAttributes(resp.dispatches, ['CDN live servers'])
+            expect(resp.dispatches['CDN live servers']).toHaveLength(1)
+        }),
+    )
+    await firstValueFrom(test$)
 })
-
-/* eslint-enable jest/no-done-callback -- re-enable */

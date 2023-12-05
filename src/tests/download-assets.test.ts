@@ -1,11 +1,10 @@
-/* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
 import AdmZip from 'adm-zip'
 import { RootRouter, send } from '@youwol/http-primitives'
 
 import { mergeMap, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 
-import { from, Observable, ReplaySubject } from 'rxjs'
+import { firstValueFrom, from, Observable, ReplaySubject } from 'rxjs'
 import {
     remoteCustomAssetId,
     remoteDataFileAssetId,
@@ -34,16 +33,12 @@ jest.setTimeout(10 * 1000)
 
 let currentShell: Shell<unknown> = undefined
 
-beforeEach((done) => {
-    testSetup$().subscribe(() => {
-        done()
-    })
+beforeEach(async () => {
+    await firstValueFrom(testSetup$())
 })
 
-afterEach((done) => {
-    testTearDown$(currentShell).subscribe(() => {
-        done()
-    })
+afterEach(async () => {
+    await firstValueFrom(testTearDown$(currentShell))
 })
 
 function test_download_asset<TContext>({
@@ -117,36 +112,39 @@ function test_download_asset<TContext>({
 }
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
-test('download flux-project', (done) => {
+test('download flux-project', async () => {
     class Context {}
     const assetId = remoteFluxAssetId
     const getTestPath = `${
         RootRouter.HostName
     }/api/assets-gateway/flux-backend/projects/${window.atob(assetId)}`
-
-    test_download_asset({
-        assetId,
-        getTestPath,
-        context: new Context(),
-    }).subscribe(() => done())
+    await firstValueFrom(
+        test_download_asset({
+            assetId,
+            getTestPath,
+            context: new Context(),
+        }),
+    )
 })
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
-test('download data', (done) => {
+test('download data', async () => {
     class Context {}
     const assetId = remoteDataFileAssetId
     const getTestPath = `${
         RootRouter.HostName
     }/api/assets-gateway/files-backend/files/${window.atob(assetId)}`
 
-    test_download_asset({
-        assetId,
-        getTestPath,
-        context: new Context(),
-    }).subscribe(() => done())
+    await firstValueFrom(
+        test_download_asset({
+            assetId,
+            getTestPath,
+            context: new Context(),
+        }),
+    )
 })
 
-test('download story', (done) => {
+test('download story', async () => {
     class Context {
         public readonly assetId = remoteStoryAssetId
         public readonly rawId = window.atob(remoteStoryAssetId)
@@ -156,35 +154,38 @@ test('download story', (done) => {
     }/api/assets-gateway/stories-backend/stories/${window.atob(
         remoteStoryAssetId,
     )}`
-
-    test_download_asset({
-        assetId: remoteStoryAssetId,
-        whileDownloadOperator: (shell$: Observable<Shell<Context>>) => {
-            return shell$.pipe(
-                addBookmarkLog({
-                    text: `Make sure documents can be retrieved while downloading (from remote)`,
-                }),
-                getStoryDocuments(
-                    (s) => {
-                        return {
-                            storyId: s.context.rawId,
-                            parentDocumentId: s.context.rawId,
-                        }
-                    },
-                    {
-                        sideEffects: (response) => {
-                            expect(response.documents.length).toBeGreaterThan(0)
+    await firstValueFrom(
+        test_download_asset({
+            assetId: remoteStoryAssetId,
+            whileDownloadOperator: (shell$: Observable<Shell<Context>>) => {
+                return shell$.pipe(
+                    addBookmarkLog({
+                        text: `Make sure documents can be retrieved while downloading (from remote)`,
+                    }),
+                    getStoryDocuments(
+                        (s) => {
+                            return {
+                                storyId: s.context.rawId,
+                                parentDocumentId: s.context.rawId,
+                            }
                         },
-                    },
-                ),
-            )
-        },
-        getTestPath,
-        context: new Context(),
-    }).subscribe(() => done())
+                        {
+                            sideEffects: (response) => {
+                                expect(
+                                    response.documents.length,
+                                ).toBeGreaterThan(0)
+                            },
+                        },
+                    ),
+                )
+            },
+            getTestPath,
+            context: new Context(),
+        }),
+    )
 })
 
-test('download custom asset with files', (done) => {
+test('download custom asset with files', async () => {
     class Context {
         public readonly assetId = remoteCustomAssetId
         public readonly zipPath = path.resolve(
@@ -200,72 +201,62 @@ test('download custom asset with files', (done) => {
     const assetId = remoteCustomAssetId
     const getTestPath = `${RootRouter.HostName}/api/assets-gateway/assets-backend/assets/${assetId}/files/topLevelFile.json`
 
-    test_download_asset({
+    const test$ = test_download_asset({
         assetId,
         getTestPath,
         context: new Context(),
-    })
-        .pipe(
-            addBookmarkLog({ text: `Retrieve asset's zip files` }),
-            getAssetZipFiles(
-                (shell: Shell<Context>) => {
-                    return {
-                        assetId: shell.context.assetId,
-                        callerOptions: {
-                            headers: { localOnly: 'true' },
-                        },
-                    }
-                },
-                {
-                    newShell: (shell, resp) => {
-                        return new Shell<Context>({
-                            context: new Context({
-                                ...shell.context,
-                                blobZip: resp,
-                            }),
-                        })
+    }).pipe(
+        addBookmarkLog({ text: `Retrieve asset's zip files` }),
+        getAssetZipFiles(
+            (shell: Shell<Context>) => {
+                return {
+                    assetId: shell.context.assetId,
+                    callerOptions: {
+                        headers: { localOnly: 'true' },
                     },
-                },
-            ),
-            addBookmarkLog({ text: `Save zip file` }),
-            mergeMap((shell) => {
-                return from(
-                    new Response(shell.context.blobZip)
-                        .arrayBuffer()
-                        .then((buffer) => {
-                            writeFileSync(
-                                shell.context.zipPath,
-                                Buffer.from(buffer),
-                            )
-                            return shell
+                }
+            },
+            {
+                newShell: (shell, resp) => {
+                    return new Shell<Context>({
+                        context: new Context({
+                            ...shell.context,
+                            blobZip: resp,
                         }),
-                )
-            }),
-            addBookmarkLog({ text: `Assert content of zip file` }),
-            mergeMap((shell) => {
-                const promise = new Promise((resolve) => {
-                    const zipped = new AdmZip(shell.context.zipPath)
-                    zipped.readAsTextAsync('topLevelFile.json', (data) => {
-                        expect(JSON.parse(data).summary).toBe(
-                            'a file at the top level',
-                        )
                     })
-                    zipped.readAsTextAsync(
-                        'innerFolder/innerFile.json',
-                        (data) => {
-                            expect(JSON.parse(data).summary).toBe(
-                                'A file in a folder.',
-                            )
-                            resolve(true)
-                        },
+                },
+            },
+        ),
+        addBookmarkLog({ text: `Save zip file` }),
+        mergeMap((shell) => {
+            return from(
+                new Response(shell.context.blobZip)
+                    .arrayBuffer()
+                    .then((buffer) => {
+                        writeFileSync(
+                            shell.context.zipPath,
+                            Buffer.from(buffer),
+                        )
+                        return shell
+                    }),
+            )
+        }),
+        addBookmarkLog({ text: `Assert content of zip file` }),
+        mergeMap((shell) => {
+            const promise = new Promise((resolve) => {
+                const zipped = new AdmZip(shell.context.zipPath)
+                zipped.readAsTextAsync('topLevelFile.json', (data) => {
+                    expect(JSON.parse(data).summary).toBe(
+                        'a file at the top level',
                     )
                 })
-                return from(promise)
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+                zipped.readAsTextAsync('innerFolder/innerFile.json', (data) => {
+                    expect(JSON.parse(data).summary).toBe('A file in a folder.')
+                    resolve(true)
+                })
+            })
+            return from(promise)
+        }),
+    )
+    await firstValueFrom(test$)
 })
-
-/* eslint-enable jest/no-done-callback -- re-enable */

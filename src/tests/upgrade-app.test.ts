@@ -1,6 +1,3 @@
-// eslint-disable-next-line eslint-comments/disable-enable-pair -- Don't know why this very line is needed
-/* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
-
 import { PyYouwolClient } from '../lib'
 import { Shell, shell$, testSetup$, testTearDown$ } from './shell'
 import {
@@ -15,7 +12,7 @@ import {
     send,
 } from '@youwol/http-primitives'
 import { map, mergeMap, reduce, takeWhile, tap } from 'rxjs/operators'
-import { forkJoin, merge, of, ReplaySubject } from 'rxjs'
+import { firstValueFrom, forkJoin, merge, of, ReplaySubject } from 'rxjs'
 import { uploadPackagesAndCheck$ } from './utils'
 import path from 'path'
 
@@ -45,71 +42,62 @@ const filePaths = (versions: string[]) =>
         }
     }, {}) as { [k: string]: string }
 
-beforeAll((done) => {
+beforeAll(async () => {
     const cdnClient = new CdnBackend.Client({
         basePath: '/admin/remote/api/assets-gateway/cdn-backend',
     })
     const explorerClient = new ExplorerBackend.Client({
         basePath: '/admin/remote/api/assets-gateway/treedb-backend',
     })
-    forkJoin([
+    const beforeAll$ = forkJoin([
         cdnClient.getLibraryInfo$({ libraryId: window.btoa(packageName) }),
         explorerClient.getDefaultUserDrive$().pipe(raiseHTTPErrors()),
-    ])
-        .pipe(
-            // To re-publish all versions (instead of the next block):
-            // mergeMap(([_, respDrive]) => {
-            //     return uploadPackages({filePaths: filePaths(versions), folderId: respDrive.homeFolderId, cdnClient })
-            // }),
-            mergeMap(([respCdn, respDrive]) => {
-                if (
-                    respCdn instanceof HTTPError /* && respCdn.status == 404*/
-                ) {
-                    if (respCdn.status !== 404) {
-                        throw `Unexpected error code while getting library info ${respCdn.status}`
-                    }
-                    return uploadPackagesAndCheck$({
-                        packageName,
-                        paths: filePaths(versions),
-                        folderId: respDrive.homeFolderId,
-                        cdnClient,
-                        check: 'strict',
-                    })
-                }
-                const missingVersions = versions.filter(
-                    (v) => !respCdn.versions.includes(v),
-                )
-
-                if (missingVersions.length === 0) {
-                    console.log(
-                        `All required versions of ${packageName} available in remote`,
-                        respCdn.versions,
-                    )
-                    return of(respCdn)
+    ]).pipe(
+        // To re-publish all versions (instead of the next block):
+        // mergeMap(([_, respDrive]) => {
+        //     return uploadPackages({filePaths: filePaths(versions), folderId: respDrive.homeFolderId, cdnClient })
+        // }),
+        mergeMap(([respCdn, respDrive]) => {
+            if (respCdn instanceof HTTPError /* && respCdn.status == 404*/) {
+                if (respCdn.status !== 404) {
+                    throw `Unexpected error code while getting library info ${respCdn.status}`
                 }
                 return uploadPackagesAndCheck$({
                     packageName,
-                    paths: filePaths(missingVersions),
+                    paths: filePaths(versions),
                     folderId: respDrive.homeFolderId,
                     cdnClient,
-                    check: 'loose',
+                    check: 'strict',
                 })
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+            }
+            const missingVersions = versions.filter(
+                (v) => !respCdn.versions.includes(v),
+            )
+
+            if (missingVersions.length === 0) {
+                console.log(
+                    `All required versions of ${packageName} available in remote`,
+                    respCdn.versions,
+                )
+                return of(respCdn)
+            }
+            return uploadPackagesAndCheck$({
+                packageName,
+                paths: filePaths(missingVersions),
+                folderId: respDrive.homeFolderId,
+                cdnClient,
+                check: 'loose',
+            })
+        }),
+    )
+    await firstValueFrom(beforeAll$)
 })
-beforeEach((done) => {
-    testSetup$().subscribe(() => {
-        done()
-    })
+beforeEach(async () => {
+    await firstValueFrom(testSetup$())
 })
 
-afterEach((done) => {
-    testTearDown$(currentShell).subscribe(() => {
-        done()
-    })
+afterEach(async () => {
+    await firstValueFrom(testTearDown$(currentShell))
 })
 
 function expectTestUpgrade({
@@ -209,36 +197,36 @@ function expectTestUpgrade({
 }
 
 // eslint-disable-next-line jest/expect-expect -- expectation factorized in expectTestUpgrade
-test('upgrade: 0.1.0 -> latest', (done) => {
-    expectTestUpgrade({
-        installVersion: '0.1.0',
-        queryVersion: 'latest',
-        expectedVersion: '1.1.1',
-        targetLabel: 'upgrade: 0.1.0 -> latest',
-    }).subscribe(() => {
-        done()
-    })
+test('upgrade: 0.1.0 -> latest', async () => {
+    await firstValueFrom(
+        expectTestUpgrade({
+            installVersion: '0.1.0',
+            queryVersion: 'latest',
+            expectedVersion: '1.1.1',
+            targetLabel: 'upgrade: 0.1.0 -> latest',
+        }),
+    )
 })
 
 // eslint-disable-next-line jest/expect-expect -- expectation factorized in expectTestUpgrade
-test('upgrade: 0.1.0 -> ^0.0.1', (done) => {
-    expectTestUpgrade({
-        installVersion: '0.1.0',
-        queryVersion: '^0.0.1',
-        expectedVersion: '0.0.1',
-        targetLabel: 'upgrade: 0.1.0 -> ^0.0.1',
-    }).subscribe(() => {
-        done()
-    })
+test('upgrade: 0.1.0 -> ^0.0.1', async () => {
+    await firstValueFrom(
+        expectTestUpgrade({
+            installVersion: '0.1.0',
+            queryVersion: '^0.0.1',
+            expectedVersion: '0.0.1',
+            targetLabel: 'upgrade: 0.1.0 -> ^0.0.1',
+        }),
+    )
 })
 
 // eslint-disable-next-line jest/expect-expect -- expectation factorized in expectTestUpgrade
-test('upgrade: none -> x', (done) => {
-    expectTestUpgrade({
-        queryVersion: 'x',
-        expectedVersion: '1.1.1',
-        targetLabel: 'upgrade: none -> x',
-    }).subscribe(() => {
-        done()
-    })
+test('upgrade: none -> x', async () => {
+    await firstValueFrom(
+        expectTestUpgrade({
+            queryVersion: 'x',
+            expectedVersion: '1.1.1',
+            targetLabel: 'upgrade: none -> x',
+        }),
+    )
 })
