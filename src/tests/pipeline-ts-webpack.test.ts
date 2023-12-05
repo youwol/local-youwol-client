@@ -1,8 +1,6 @@
-/* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
-
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 
-import { combineLatest, of } from 'rxjs'
+import { combineLatest, firstValueFrom, of } from 'rxjs'
 import { skipWhile, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 
@@ -15,21 +13,17 @@ import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
-beforeEach(async (done) => {
-    setup$({
-        localOnly: true,
-        email: 'int_tests_yw-users@test-user',
-    })
-        .pipe(tap(() => applyTestCtxLabels()))
-        .subscribe(() => {
-            done()
-        })
+beforeEach(async () => {
+    await firstValueFrom(
+        setup$({
+            localOnly: true,
+            email: 'int_tests_yw-users@test-user',
+        }).pipe(tap(() => applyTestCtxLabels())),
+    )
 })
 
-afterEach((done) => {
-    of(undefined)
-        .pipe(resetTestCtxLabels())
-        .subscribe(() => done())
+afterEach(async () => {
+    await firstValueFrom(of(undefined).pipe(resetTestCtxLabels()))
 })
 
 function testProjectCreationBase(body: CreateProjectFromTemplateBody) {
@@ -70,23 +64,21 @@ function testProjectCreationBase(body: CreateProjectFromTemplateBody) {
 }
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in testProjectCreationBase
-test('pyYouwol.admin.projects.createProjectFromTemplate ts-webpack lib', (done) => {
-    testProjectCreationBase({
-        type: 'ts+webpack library',
-        parameters: { name: 'test-lib' },
-    }).subscribe(() => {
-        done()
-    })
+test('pyYouwol.admin.projects.createProjectFromTemplate ts-webpack lib', async () => {
+    await firstValueFrom(
+        testProjectCreationBase({
+            type: 'ts+webpack library',
+            parameters: { name: 'test-lib' },
+        }),
+    )
 })
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in testProjectCreationBase
-test('pyYouwol.admin.projects.createProjectFromTemplate  ts-webpack app', (done) => {
-    testProjectCreationBase({
-        type: 'ts+webpack app.',
-        parameters: { name: 'test-app', "dev-server's port": '5000' },
-    }).subscribe(() => {
-        done()
-    })
+test('pyYouwol.admin.projects.createProjectFromTemplate  ts-webpack app', async () => {
+    await firstValueFrom(
+        testProjectCreationBase({
+            type: 'ts+webpack app.',
+            parameters: { name: 'test-app', "dev-server's port": '5000' },
+        }),
+    )
 })
-
-/* eslint-enable jest/no-done-callback -- re-enable */

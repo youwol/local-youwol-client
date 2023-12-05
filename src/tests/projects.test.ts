@@ -1,9 +1,7 @@
-/* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
-
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 
 import { btoa } from 'buffer'
-import { combineLatest, Observable, of } from 'rxjs'
+import { combineLatest, firstValueFrom, Observable, of } from 'rxjs'
 import { filter, map, mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 
@@ -54,103 +52,91 @@ function assertBeforeAllFinished() {
 let newProjectName: string
 let privateGroupId: string
 const projectTodoAppName = '@youwol/todo-app-js'
-beforeAll(async (done) => {
+beforeAll(async () => {
     newProjectName = uniqueProjectName('todo-app-js')
-    setup$({
+    const beforeAll$ = setup$({
         localOnly: true,
         email: 'int_tests_yw-users@test-user',
-    })
-        .pipe(
-            mergeMap(() =>
-                pyYouwol.admin.customCommands.doPost$({
-                    name: 'clone-project',
-                    body: {
-                        url: 'https://github.com/youwol/todo-app-js.git',
-                        branch: 'main',
-                        name: newProjectName,
-                    },
-                }),
-            ),
-            mergeMap(() =>
-                pyYouwol.admin.customCommands.doPost$({
-                    name: 'clone-project',
-                    body: {
-                        url: 'https://github.com/youwol/todo-app-js.git',
-                        branch: 'main',
-                        name: projectTodoAppName,
-                    },
-                }),
-            ),
-            mergeMap(() => {
-                return pyYouwol.admin.customCommands.doDelete$({
-                    name: 'purge-downloads',
-                })
+    }).pipe(
+        mergeMap(() =>
+            pyYouwol.admin.customCommands.doPost$({
+                name: 'clone-project',
+                body: {
+                    url: 'https://github.com/youwol/todo-app-js.git',
+                    branch: 'main',
+                    name: newProjectName,
+                },
             }),
-            mergeMap(() => {
-                return new AssetsGateway.Client().accounts.getSessionDetails$()
+        ),
+        mergeMap(() =>
+            pyYouwol.admin.customCommands.doPost$({
+                name: 'clone-project',
+                body: {
+                    url: 'https://github.com/youwol/todo-app-js.git',
+                    branch: 'main',
+                    name: projectTodoAppName,
+                },
             }),
-            raiseHTTPErrors(),
-        )
-        .subscribe((session) => {
-            beforeAllDone = true
-            privateGroupId = session.userInfo.groups.find(
-                ({ path }) => path == 'private',
-            ).id
-            done()
-        })
+        ),
+        mergeMap(() => {
+            return pyYouwol.admin.customCommands.doDelete$({
+                name: 'purge-downloads',
+            })
+        }),
+        mergeMap(() => {
+            return new AssetsGateway.Client().accounts.getSessionDetails$()
+        }),
+        raiseHTTPErrors(),
+    )
+    const session = await firstValueFrom(beforeAll$)
+    beforeAllDone = true
+    privateGroupId = session.userInfo.groups.find(
+        ({ path }) => path == 'private',
+    ).id
 })
 
-beforeEach((done) => {
-    of(undefined)
-        .pipe(applyTestCtxLabels())
-        .subscribe(() => done())
+beforeEach(async () => {
+    await firstValueFrom(of(undefined).pipe(applyTestCtxLabels()))
 })
 
-afterEach((done) => {
-    of(undefined)
-        .pipe(resetTestCtxLabels())
-        .subscribe(() => done())
+afterEach(async () => {
+    await firstValueFrom(of(undefined).pipe(resetTestCtxLabels()))
 })
 
-test('pyYouwol.admin.projects.status', (done) => {
+test('pyYouwol.admin.projects.status', async () => {
     assertBeforeAllFinished()
-    combineLatest([
+    const test$ = combineLatest([
         pyYouwol.admin.projects.status$().pipe(raiseHTTPErrors()),
         pyYouwol.admin.projects.webSocket.status$(),
-    ])
-        .pipe(take(1))
-        .subscribe(([respHttp, respWs]) => {
-            expect(respHttp.results).toHaveLength(2)
-            expect(respWs.data.results).toHaveLength(2)
-            expectProjectsStatus(respHttp, newProjectName)
-            expectProjectsStatus(respWs.data, newProjectName)
-            expectProjectsStatus(respHttp, projectTodoAppName)
-            expectProjectsStatus(respWs.data, projectTodoAppName)
-            // respWs contains more fields than respHttp...e.g. pipeline.target (related to pb with union?)
-            // expect(respHttp).toEqual(respWs.data)
-            done()
-        })
+    ]).pipe(take(1))
+    const [respHttp, respWs] = await firstValueFrom(test$)
+    expect(respHttp.results).toHaveLength(2)
+    expect(respWs.data.results).toHaveLength(2)
+    expectProjectsStatus(respHttp, newProjectName)
+    expectProjectsStatus(respWs.data, newProjectName)
+    expectProjectsStatus(respHttp, projectTodoAppName)
+    expectProjectsStatus(respWs.data, projectTodoAppName)
 })
 
-test('pyYouwol.admin.projects.projectStatus', (done) => {
+test('pyYouwol.admin.projects.projectStatus', async () => {
     assertBeforeAllFinished()
     const projectId = btoa(newProjectName)
-    combineLatest([
+    const test$ = combineLatest([
         pyYouwol.admin.projects
             .getProjectStatus$({ projectId })
             .pipe(raiseHTTPErrors()),
         pyYouwol.admin.projects.webSocket.projectStatus$({ projectId }),
-    ]).subscribe(([respHttp, respWs]) => {
-        expectProjectStatus(respHttp)
-        expectAttributes(respWs.attributes, ['projectId'])
-        expect(respWs.data).toEqual(respHttp)
-        done()
-    })
+    ])
+
+    const [respHttp, respWs] = await firstValueFrom(test$)
+    expectProjectStatus(respHttp)
+    expectAttributes(respWs.attributes, ['projectId'])
+    expect(respWs.data).toEqual(respHttp)
 })
 
-test('pyYouwol.admin.projects.flowStatus', (done) => {
+test('pyYouwol.admin.projects.flowStatus', async () => {
     assertBeforeAllFinished()
-    combineLatest([
+    const test$ = combineLatest([
         pyYouwol.admin.projects
             .getPipelineStatus$({
                 projectId: btoa(newProjectName),
@@ -158,14 +144,12 @@ test('pyYouwol.admin.projects.flowStatus', (done) => {
             })
             .pipe(raiseHTTPErrors()),
         pyYouwol.admin.projects.webSocket.pipelineStatus$(),
-    ])
-        .pipe(take(1))
-        .subscribe(([respHttp, respWs]) => {
-            expectFlowStatus(respHttp, newProjectName)
-            expectAttributes(respWs.attributes, ['projectId', 'flowId'])
-            expect(respHttp).toEqual(respWs.data)
-            done()
-        })
+    ]).pipe(take(1))
+
+    const [respHttp, respWs] = await firstValueFrom(test$)
+    expectFlowStatus(respHttp, newProjectName)
+    expectAttributes(respWs.attributes, ['projectId', 'flowId'])
+    expect(respHttp).toEqual(respWs.data)
 })
 
 function run$(
@@ -221,7 +205,7 @@ function checkAsset({
     }
 }
 
-test('pyYouwol.admin.projects.runStep new project', (done) => {
+test('pyYouwol.admin.projects.runStep new project', async () => {
     assertBeforeAllFinished()
     const projectId = btoa(newProjectName)
     const steps$ = expectPipelineStepEvents$(pyYouwol)
@@ -254,14 +238,14 @@ test('pyYouwol.admin.projects.runStep new project', (done) => {
             groupId: privateGroupId,
         }),
     )
-    combineLatest([runs$, steps$]).subscribe(([artifacts, steps]) => {
-        expect(artifacts).toBeTruthy()
-        expect(steps).toBeTruthy()
-        done()
-    })
+    const [artifacts, steps] = await firstValueFrom(
+        combineLatest([runs$, steps$]),
+    )
+    expect(artifacts).toBeTruthy()
+    expect(steps).toBeTruthy()
 })
 
-test('pyYouwol.admin.projects.runStep todo-app-js', (done) => {
+test('pyYouwol.admin.projects.runStep todo-app-js', async () => {
     assertBeforeAllFinished()
     const projectId = btoa(projectTodoAppName)
     const steps$ = expectPipelineStepEvents$(pyYouwol)
@@ -296,11 +280,9 @@ test('pyYouwol.admin.projects.runStep todo-app-js', (done) => {
             groupId: btoa('/youwol-users/youwol-devs/youwol-admins'),
         }),
     )
-    combineLatest([runs$, steps$]).subscribe(([artifacts, steps]) => {
-        expect(artifacts).toBeTruthy()
-        expect(steps).toBeTruthy()
-        done()
-    })
+    const [artifacts, steps] = await firstValueFrom(
+        combineLatest([runs$, steps$]),
+    )
+    expect(artifacts).toBeTruthy()
+    expect(steps).toBeTruthy()
 })
-
-/* eslint-enable jest/no-done-callback -- re-enable */

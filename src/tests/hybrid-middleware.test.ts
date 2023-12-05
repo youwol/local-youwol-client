@@ -1,5 +1,3 @@
-// eslint-disable-next-line eslint-comments/disable-enable-pair -- to not have problem
-/* eslint-disable jest/no-done-callback -- eslint-comment It is required because */
 import { remoteStoryAssetId } from './remote_assets_id'
 import {
     applyTestCtxLabels,
@@ -12,7 +10,7 @@ import {
 import { setup$ } from './local-youwol-test-setup'
 import { PyYouwolClient } from '../lib'
 import { delay, map, mergeMap, take, tap } from 'rxjs/operators'
-import { BehaviorSubject, from, of } from 'rxjs'
+import { BehaviorSubject, firstValueFrom, from, of } from 'rxjs'
 import { DownloadEvent } from '../lib/routers/system'
 import { CdnBackend } from '@youwol/http-clients'
 import { uploadPackagesAndCheck$ } from './utils'
@@ -22,24 +20,20 @@ jest.setTimeout(20 * 1000)
 
 const pyYouwol = new PyYouwolClient()
 
-beforeEach((done) => {
-    setup$({
-        localOnly: false,
-        email: 'int_tests_yw-users@test-user',
-    })
-        .pipe(tap(() => applyTestCtxLabels()))
-        .subscribe(() => {
-            done()
-        })
+beforeEach(async () => {
+    await firstValueFrom(
+        setup$({
+            localOnly: false,
+            email: 'int_tests_yw-users@test-user',
+        }).pipe(tap(() => applyTestCtxLabels())),
+    )
 })
 
-afterEach((done) => {
-    of(undefined)
-        .pipe(resetTestCtxLabels())
-        .subscribe(() => done())
+afterEach(async () => {
+    await firstValueFrom(of(undefined).pipe(resetTestCtxLabels()))
 })
 
-test('can retrieve asset info when remote only', (done) => {
+test('can retrieve asset info when remote only', async () => {
     class Context {
         // the creation of the test data is gathered in the youwol-config.py
         public readonly assetId = remoteStoryAssetId
@@ -54,44 +48,41 @@ test('can retrieve asset info when remote only', (done) => {
             downloadEvents$.next(d)
         })
 
-    shell$<Context>(new Context())
-        .pipe(
-            getAsset(
-                (shell: Shell<Context>) => {
-                    return {
-                        assetId: shell.context.assetId,
-                    }
+    const test$ = shell$<Context>(new Context()).pipe(
+        getAsset(
+            (shell: Shell<Context>) => {
+                return {
+                    assetId: shell.context.assetId,
+                }
+            },
+            {
+                sideEffects: (response, shell) => {
+                    expect(response.assetId).toBe(shell.context.assetId)
                 },
-                {
-                    sideEffects: (response, shell) => {
-                        expect(response.assetId).toBe(shell.context.assetId)
-                    },
+            },
+        ),
+        getPermissions(
+            (shell) => {
+                return {
+                    assetId: shell.context.assetId,
+                    callerOptions: { headers: { localOnly: 'true' } },
+                }
+            },
+            {
+                sideEffects: (response) => {
+                    expect(response.write).toBeTruthy()
+                    expect(response.read).toBeTruthy()
+                    expect(response.share).toBeTruthy()
                 },
-            ),
-            getPermissions(
-                (shell) => {
-                    return {
-                        assetId: shell.context.assetId,
-                        callerOptions: { headers: { localOnly: 'true' } },
-                    }
-                },
-                {
-                    sideEffects: (response) => {
-                        expect(response.write).toBeTruthy()
-                        expect(response.read).toBeTruthy()
-                        expect(response.share).toBeTruthy()
-                    },
-                },
-            ),
-            delay(500),
-        )
-        .subscribe(() => {
-            expect(downloadEvents$.value).toBeFalsy()
-            done()
-        })
+            },
+        ),
+        delay(500),
+    )
+    await firstValueFrom(test$)
+    expect(downloadEvents$.value).toBeFalsy()
 })
 
-test('coupled loading graph', (done) => {
+test('coupled loading graph', async () => {
     /**
      * In this test we try to resolve the loading graph of `rx-tree-views`.
      * It depends on `rxjs#^7.5.6`, `rx-vdom#^1.0.1`.
@@ -157,44 +148,42 @@ test('coupled loading graph', (done) => {
             ],
         ],
     }
-    shell$<Context>(new Context())
-        .pipe(
-            mergeMap((shell) => {
-                return uploadPackagesAndCheck$({
-                    packageName: 'rxjs',
-                    paths: {
-                        '7.999.0': path.resolve(
-                            __dirname,
-                            `${basePath}/rxjs#7.999.0.zip`,
-                        ),
-                    },
-                    folderId: shell.homeFolderId,
-                    cdnClient,
-                    check: 'strict',
-                }).pipe(map((_resp) => shell))
-            }),
-            mergeMap(() => {
-                const body = {
-                    libraries: [
-                        { name: '@youwol/rx-tree-views', version: '0.3.1' },
-                    ],
-                }
-                return from(
-                    fetch(
-                        'http://localhost:2001/api/assets-gateway/cdn-backend/queries/loading-graph',
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(body),
+    const test$ = shell$<Context>(new Context()).pipe(
+        mergeMap((shell) => {
+            return uploadPackagesAndCheck$({
+                packageName: 'rxjs',
+                paths: {
+                    '7.999.0': path.resolve(
+                        __dirname,
+                        `${basePath}/rxjs#7.999.0.zip`,
+                    ),
+                },
+                folderId: shell.homeFolderId,
+                cdnClient,
+                check: 'strict',
+            }).pipe(map((_resp) => shell))
+        }),
+        mergeMap(() => {
+            const body = {
+                libraries: [
+                    { name: '@youwol/rx-tree-views', version: '0.3.1' },
+                ],
+            }
+            return from(
+                fetch(
+                    'http://localhost:2001/api/assets-gateway/cdn-backend/queries/loading-graph',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
                         },
-                    ).then((resp) => resp.json()),
-                )
-            }),
-        )
-        .subscribe((resp) => {
-            expect(resp).toEqual(target)
-            done()
-        })
+                        body: JSON.stringify(body),
+                    },
+                ).then((resp) => resp.json()),
+            )
+        }),
+    )
+
+    const resp = await firstValueFrom(test$)
+    expect(resp).toEqual(target)
 })

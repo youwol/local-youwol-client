@@ -1,37 +1,32 @@
-/* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
 
-import { combineLatest, of } from 'rxjs'
+import { combineLatest, firstValueFrom, of } from 'rxjs'
 import { reduce, take, tap } from 'rxjs/operators'
 import { setup$ } from './local-youwol-test-setup'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 
 const pyYouwol = new PyYouwolClient()
 
-beforeAll(async (done) => {
-    setup$({
-        localOnly: true,
-        email: 'int_tests_yw-users@test-user',
-    }).subscribe(() => {
-        done()
-    })
+beforeAll(async () => {
+    await firstValueFrom(
+        setup$({
+            localOnly: true,
+            email: 'int_tests_yw-users@test-user',
+        }),
+    )
 })
 
-beforeEach((done) => {
-    of(undefined)
-        .pipe(applyTestCtxLabels())
-        .subscribe(() => done())
+beforeEach(async () => {
+    await firstValueFrom(of(undefined).pipe(applyTestCtxLabels()))
 })
 
-afterEach((done) => {
-    of(undefined)
-        .pipe(resetTestCtxLabels())
-        .subscribe(() => done())
+afterEach(async () => {
+    await firstValueFrom(of(undefined).pipe(resetTestCtxLabels()))
 })
 
-test('pyYouwol.admin.customCommands.doPost$', (done) => {
-    combineLatest([
+test('pyYouwol.admin.customCommands.doPost$', async () => {
+    const test$ = combineLatest([
         pyYouwol.admin.customCommands
             .doPost$({
                 name: 'test-cmd-post',
@@ -48,35 +43,30 @@ test('pyYouwol.admin.customCommands.doPost$', (done) => {
                 take(2),
                 reduce((acc, e) => [...acc, e], []),
             ),
-    ])
-        .pipe(
-            tap(([respHttp, respWs]) => {
-                expect(respHttp).toEqual({ status: 'test-cmd-post ok' })
-                expectAttributes(respWs[0], [
-                    'level',
-                    'attributes',
-                    'labels',
-                    'text',
-                    'contextId',
-                    'parentContextId',
-                ])
-                expect(
-                    respWs[0].labels.includes('Label.END_POINT'),
-                ).toBeTruthy()
-                expect(respWs[0].text).toBe(
-                    'POST: /admin/custom-commands/test-cmd-post',
-                )
-                expect(respWs[1].text).toBe('test message')
-                expect(respWs[1].data.body.returnObject).toEqual(respHttp)
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+    ]).pipe(
+        tap(([respHttp, respWs]) => {
+            expect(respHttp).toEqual({ status: 'test-cmd-post ok' })
+            expectAttributes(respWs[0], [
+                'level',
+                'attributes',
+                'labels',
+                'text',
+                'contextId',
+                'parentContextId',
+            ])
+            expect(respWs[0].labels.includes('Label.END_POINT')).toBeTruthy()
+            expect(respWs[0].text).toBe(
+                'POST: /admin/custom-commands/test-cmd-post',
+            )
+            expect(respWs[1].text).toBe('test message')
+            expect(respWs[1].data.body.returnObject).toEqual(respHttp)
+        }),
+    )
+    await firstValueFrom(test$)
 })
 
-test('pyYouwol.admin.customCommands.doPut$', (done) => {
-    pyYouwol.admin.customCommands
+test('pyYouwol.admin.customCommands.doPut$', async () => {
+    const test$ = pyYouwol.admin.customCommands
         .doPut$({
             name: 'test-cmd-put',
             body: {
@@ -84,19 +74,16 @@ test('pyYouwol.admin.customCommands.doPut$', (done) => {
             },
         })
         .pipe(raiseHTTPErrors())
-        .subscribe((resp) => {
-            expect(resp).toEqual({ status: 'test-cmd-put ok' })
-            done()
-        })
+
+    const resp = await firstValueFrom(test$)
+    expect(resp).toEqual({ status: 'test-cmd-put ok' })
 })
 
-test('pyYouwol.admin.customCommands.doDelete$', (done) => {
-    pyYouwol.admin.customCommands
+test('pyYouwol.admin.customCommands.doDelete$', async () => {
+    const test$ = pyYouwol.admin.customCommands
         .doDelete$({ name: 'test-cmd-delete' })
         .pipe(raiseHTTPErrors())
-        .subscribe((resp) => {
-            expect(resp).toEqual({ status: 'deleted' })
-            done()
-        })
+
+    const resp = await firstValueFrom(test$)
+    expect(resp).toEqual({ status: 'deleted' })
 })
-/* eslint-enable jest/no-done-callback -- re-enable */

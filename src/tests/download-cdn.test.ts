@@ -1,6 +1,4 @@
-// eslint-disable-next-line eslint-comments/disable-enable-pair -- Don't know why this very line is needed
-/* eslint-disable jest/no-done-callback -- eslint-comment Find a good way to work with rxjs in jest */
-import { from, Observable, ReplaySubject } from 'rxjs'
+import { firstValueFrom, from, Observable, ReplaySubject } from 'rxjs'
 import { PyYouwolClient } from '../lib'
 import { DownloadEvent } from '../lib/routers/system'
 import { mergeMap, tap } from 'rxjs/operators'
@@ -26,16 +24,12 @@ jest.setTimeout(10 * 1000)
 
 let currentShell: Shell<unknown> = undefined
 
-beforeEach((done) => {
-    testSetup$().subscribe(() => {
-        done()
-    })
+beforeEach(async () => {
+    await firstValueFrom(testSetup$())
 })
 
-afterEach((done) => {
-    testTearDown$(currentShell).subscribe(() => {
-        done()
-    })
+afterEach(async () => {
+    await firstValueFrom(testTearDown$(currentShell))
 })
 
 function testDownloadPackage<TContext>(
@@ -71,56 +65,52 @@ function testDownloadPackage<TContext>(
 }
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
-test('install package rxjs', (done) => {
+test('install package rxjs', async () => {
     class Context {}
-    return shell$<Context>(new Context())
-        .pipe(
-            // ensure shell's tearDown in 'afterEach'
-            tap((shell) => (currentShell = shell)),
-            testDownloadPackage('rxjs'),
-        )
-        .subscribe(() => done())
+    const test$ = shell$<Context>(new Context()).pipe(
+        // ensure shell's tearDown in 'afterEach'
+        tap((shell) => (currentShell = shell)),
+        testDownloadPackage('rxjs'),
+    )
+    await firstValueFrom(test$)
 })
 
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
-test('install package @youwol/logging#0.0.2-next => Failure', (done) => {
+test('install package @youwol/logging#0.0.2-next => Failure', async () => {
     class Context {}
-    return shell$<Context>(new Context())
-        .pipe(
-            // ensure shell's tearDown in 'afterEach'
-            tap((shell) => (currentShell = shell)),
-            testDownloadPackage('@youwol/logging#0.0.2-next', 'failed'),
-        )
-        .subscribe(() => done())
+    const test$ = shell$<Context>(new Context()).pipe(
+        // ensure shell's tearDown in 'afterEach'
+        tap((shell) => (currentShell = shell)),
+        testDownloadPackage('@youwol/logging#0.0.2-next', 'failed'),
+    )
+
+    await firstValueFrom(test$)
 })
 
 test(
     'install package rxjs + clear + install package rxjs',
-    (done) => {
+    async () => {
         class Context {}
-        return shell$<Context>(new Context())
-            .pipe(
-                // ensure shell's tearDown in 'afterEach'
-                tap((shell) => (currentShell = shell)),
-                testDownloadPackage('rxjs', 'succeeded'),
-                addBookmarkLog({ text: `Reset CDN` }),
-                resetCdn({
-                    sideEffects: (resp: ResetCdnResponse) => {
-                        expect(resp.deletedPackages).toEqual(['rxjs'])
-                        State.clear()
-                    },
-                }),
-                getCdnStatus({
-                    sideEffects: (resp: GetCdnStatusResponse) => {
-                        expect(resp.packages).toHaveLength(0)
-                    },
-                }),
-                addBookmarkLog({ text: `Download RxJS again` }),
-                testDownloadPackage('rxjs', 'succeeded'),
-            )
-            .subscribe(() => {
-                done()
-            })
+        const test$ = shell$<Context>(new Context()).pipe(
+            // ensure shell's tearDown in 'afterEach'
+            tap((shell) => (currentShell = shell)),
+            testDownloadPackage('rxjs', 'succeeded'),
+            addBookmarkLog({ text: `Reset CDN` }),
+            resetCdn({
+                sideEffects: (resp: ResetCdnResponse) => {
+                    expect(resp.deletedPackages).toEqual(['rxjs'])
+                    State.clear()
+                },
+            }),
+            getCdnStatus({
+                sideEffects: (resp: GetCdnStatusResponse) => {
+                    expect(resp.packages).toHaveLength(0)
+                },
+            }),
+            addBookmarkLog({ text: `Download RxJS again` }),
+            testDownloadPackage('rxjs', 'succeeded'),
+        )
+        await firstValueFrom(test$)
     },
     20 * 1000,
 )
@@ -128,115 +118,107 @@ test(
 // eslint-disable-next-line jest/expect-expect -- expects are factorized in test_download_asset
 test(
     'version resolution if other majors already downloaded',
-    (done) => {
+    async () => {
         // coming from https://tooling.youwol.com/taiga/project/pyyouwol/issue/1203
         const downloadEvents1$ = new ReplaySubject<{ data: DownloadEvent }>()
         const downloadEvents2$ = new ReplaySubject<{ data: DownloadEvent }>()
         const rawId = 'QHlvdXdvbC9jZG4tY2xpZW50'
         const assetId = window.btoa(rawId)
         class Context {}
-        return shell$<Context>(new Context())
-            .pipe(
-                tap((shell) => {
-                    currentShell = shell
-                    shell.addSubscription(
-                        'downloadEvents_^1.0.0',
-                        pyYouwol.admin.system.webSocket
-                            .downloadEvent$()
-                            .subscribe((d) => downloadEvents1$.next(d)),
-                    )
-                }),
-                addBookmarkLog({ text: `fetch script ^1.0.0` }),
-                mergeMap((shell) => {
-                    return from(
-                        fetch(
-                            `/api/assets-gateway/raw/package/${rawId}/^1.0.0/dist/@youwol/cdn-client.js`,
-                        ).then(() => shell),
-                    )
-                }),
-                expectDownloadEvents(assetId, downloadEvents1$, 'succeeded'),
-                addBookmarkLog({ text: `^1.0.0 succeeded` }),
-                tap((shell) => {
-                    downloadEvents1$.complete()
-                    shell.addSubscription(
-                        'downloadEvents_^2.0.0',
-                        pyYouwol.admin.system.webSocket
-                            .downloadEvent$()
-                            .subscribe((d) => downloadEvents2$.next(d)),
-                    )
-                }),
-                addBookmarkLog({ text: `fetch script ^2.0.0` }),
-                mergeMap((shell) => {
-                    return from(
-                        fetch(
-                            `/api/assets-gateway/raw/package/${rawId}/^2.0.0/dist/@youwol/cdn-client.js`,
-                        ).then(() => shell),
-                    )
-                }),
-                expectDownloadEvents(assetId, downloadEvents2$, 'succeeded'),
-                addBookmarkLog({ text: `^2.0.0 succeeded` }),
-            )
-            .subscribe(() => {
-                done()
-            })
+        const test$ = shell$<Context>(new Context()).pipe(
+            tap((shell) => {
+                currentShell = shell
+                shell.addSubscription(
+                    'downloadEvents_^1.0.0',
+                    pyYouwol.admin.system.webSocket
+                        .downloadEvent$()
+                        .subscribe((d) => downloadEvents1$.next(d)),
+                )
+            }),
+            addBookmarkLog({ text: `fetch script ^1.0.0` }),
+            mergeMap((shell) => {
+                return from(
+                    fetch(
+                        `/api/assets-gateway/raw/package/${rawId}/^1.0.0/dist/@youwol/cdn-client.js`,
+                    ).then(() => shell),
+                )
+            }),
+            expectDownloadEvents(assetId, downloadEvents1$, 'succeeded'),
+            addBookmarkLog({ text: `^1.0.0 succeeded` }),
+            tap((shell) => {
+                downloadEvents1$.complete()
+                shell.addSubscription(
+                    'downloadEvents_^2.0.0',
+                    pyYouwol.admin.system.webSocket
+                        .downloadEvent$()
+                        .subscribe((d) => downloadEvents2$.next(d)),
+                )
+            }),
+            addBookmarkLog({ text: `fetch script ^2.0.0` }),
+            mergeMap((shell) => {
+                return from(
+                    fetch(
+                        `/api/assets-gateway/raw/package/${rawId}/^2.0.0/dist/@youwol/cdn-client.js`,
+                    ).then(() => shell),
+                )
+            }),
+            expectDownloadEvents(assetId, downloadEvents2$, 'succeeded'),
+            addBookmarkLog({ text: `^2.0.0 succeeded` }),
+        )
+
+        await firstValueFrom(test$)
     },
     20 * 1000,
 )
 
-test('headers when getting CDN resource', (done) => {
+test('headers when getting CDN resource', async () => {
     class Context {}
     const assetId = window.btoa('rxjs') //'QHlvdXdvbC9jZG4tY2xpZW50'
     const version = '^6.5.5'
     const baseUrl = '/api/assets-gateway/cdn-backend/resources'
-    return shell$<Context>(new Context())
-        .pipe(
-            // ensure shell's tearDown in 'afterEach'
-            tap((shell) => (currentShell = shell)),
-            testDownloadPackage(`rxjs#${version}`, 'succeeded'),
-            addBookmarkLog({ text: `rxjs#${version} downloaded successfully` }),
-            mergeMap(() => {
-                return from(
-                    fetch(`${baseUrl}/${assetId}/${version}/dist/rxjs.js`),
-                )
-            }),
-            tap((resp) => {
-                expect(resp.status).toBe(200)
-                expect(resp.headers.get('content-type')).toBe(
-                    'application/javascript;charset=UTF-8',
-                )
-                expect(resp.headers.get('youwol-origin')).toBe('localhost')
-                expect(resp.headers.get('x-trace-id')).toBeTruthy()
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+    const test$ = shell$<Context>(new Context()).pipe(
+        // ensure shell's tearDown in 'afterEach'
+        tap((shell) => (currentShell = shell)),
+        testDownloadPackage(`rxjs#${version}`, 'succeeded'),
+        addBookmarkLog({ text: `rxjs#${version} downloaded successfully` }),
+        mergeMap(() => {
+            return from(fetch(`${baseUrl}/${assetId}/${version}/dist/rxjs.js`))
+        }),
+        tap((resp) => {
+            expect(resp.status).toBe(200)
+            expect(resp.headers.get('content-type')).toBe(
+                'application/javascript;charset=UTF-8',
+            )
+            expect(resp.headers.get('youwol-origin')).toBe('localhost')
+            expect(resp.headers.get('x-trace-id')).toBeTruthy()
+        }),
+    )
+
+    await firstValueFrom(test$)
 })
 
-test('headers when getting CDN entry point', (done) => {
+test('headers when getting CDN entry point', async () => {
     class Context {}
     const assetId = window.btoa('rxjs') //'QHlvdXdvbC9jZG4tY2xpZW50'
     const version = '^6.5.5'
     const baseUrl = '/api/assets-gateway/cdn-backend/resources'
-    return shell$<Context>(new Context())
-        .pipe(
-            // ensure shell's tearDown in 'afterEach'
-            tap((shell) => (currentShell = shell)),
-            testDownloadPackage(`rxjs#${version}`, 'succeeded'),
-            addBookmarkLog({ text: `rxjs#${version} downloaded successfully` }),
-            mergeMap(() => {
-                return from(fetch(`${baseUrl}/${assetId}/${version}`))
-            }),
-            tap((resp) => {
-                expect(resp.status).toBe(200)
-                expect(resp.headers.get('content-type')).toBe(
-                    'application/javascript;charset=UTF-8',
-                )
-                expect(resp.headers.get('youwol-origin')).toBe('localhost')
-                expect(resp.headers.get('x-trace-id')).toBeTruthy()
-            }),
-        )
-        .subscribe(() => {
-            done()
-        })
+    const test$ = shell$<Context>(new Context()).pipe(
+        // ensure shell's tearDown in 'afterEach'
+        tap((shell) => (currentShell = shell)),
+        testDownloadPackage(`rxjs#${version}`, 'succeeded'),
+        addBookmarkLog({ text: `rxjs#${version} downloaded successfully` }),
+        mergeMap(() => {
+            return from(fetch(`${baseUrl}/${assetId}/${version}`))
+        }),
+        tap((resp) => {
+            expect(resp.status).toBe(200)
+            expect(resp.headers.get('content-type')).toBe(
+                'application/javascript;charset=UTF-8',
+            )
+            expect(resp.headers.get('youwol-origin')).toBe('localhost')
+            expect(resp.headers.get('x-trace-id')).toBeTruthy()
+        }),
+    )
+
+    await firstValueFrom(test$)
 })
