@@ -50,24 +50,9 @@ export interface Project {
     version: string
 }
 
-export type FailurePipelineNotFound = Failure
-
-export type FailureDirectoryNotFound = Failure
-
-export interface FailureImportException extends Failure {
-    traceback: string
-    exceptionType: string
-}
-
 export interface ProjectsLoadingResults {
-    results: Project[]
-    failures: {
-        directoriesNotFound: FailureDirectoryNotFound[]
-        importExceptions: FailureImportException[]
-        pipelinesNotFound: FailurePipelineNotFound[]
-    }
+    results: (Project | Failure)[]
 }
-
 export type GetProjectsStatusResponse = ProjectsLoadingResults
 
 export type ProjectsLoadingResultsResponse = ProjectsLoadingResults
