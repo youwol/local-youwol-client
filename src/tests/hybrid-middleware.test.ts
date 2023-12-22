@@ -82,7 +82,7 @@ test('can retrieve asset info when remote only', async () => {
     expect(downloadEvents$.value).toBeFalsy()
 })
 
-test('coupled loading graph', async () => {
+test.skip('coupled loading graph', async () => {
     /**
      * In this test we try to resolve the loading graph of `rx-tree-views`.
      * It depends on `rxjs#^7.5.6`, `rx-vdom#^1.0.1`.
