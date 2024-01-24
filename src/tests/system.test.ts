@@ -121,3 +121,33 @@ test('pyYouwol.admin.system.getFileContent', async () => {
     const resp = await firstValueFrom(test$)
     expect(resp).toBeTruthy()
 })
+
+test('pyYouwol.admin.system.documentation/youwol', async () => {
+    const test$ = pyYouwol.admin.system
+        .queryDocumentation({
+            path: 'youwol',
+        })
+        .pipe(raiseHTTPErrors())
+    const resp = await firstValueFrom(test$)
+    expect(resp).toBeTruthy()
+    expect(resp.name).toBe('youwol')
+    expect(resp.childrenModules).toBeInstanceOf(Array)
+    expect(resp.path).toBe('')
+})
+
+test('pyYouwol.admin.system.documentation/youwol/app/environment', async () => {
+    const test$ = pyYouwol.admin.system
+        .queryDocumentation({
+            path: 'youwol/app/environment',
+        })
+        .pipe(raiseHTTPErrors())
+    const resp = await firstValueFrom(test$)
+    expect(resp).toBeTruthy()
+    expect(resp.name).toBe('environment')
+    expect(resp.childrenModules).toBeInstanceOf(Array)
+    expect(resp.classes).toBeInstanceOf(Array)
+    expect(resp.attributes).toBeInstanceOf(Array)
+    expect(resp.functions).toBeInstanceOf(Array)
+    expect(resp.docstring).toBeInstanceOf(Array)
+    expect(resp.path).toBe('app.environment')
+})
