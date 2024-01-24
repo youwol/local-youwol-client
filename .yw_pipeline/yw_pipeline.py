@@ -10,7 +10,6 @@ class PipelineFactory(IPipelineFactory):
 
     async def get(self, env: YouwolEnvironment, context: Context) -> Pipeline:
         config = PipelineConfig(
-            includeConsistencyTest=True,
             target=JsBundle(
                 links=[
                     Link(name="doc", url="dist/docs/index.html"),
