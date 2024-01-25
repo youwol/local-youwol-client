@@ -20,6 +20,7 @@ import { setup$ } from './local-youwol-test-setup'
 import { PipelineStepStatusResponse } from '../lib/routers/projects'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 import { AssetsGateway } from '@youwol/http-clients'
+import * as fs from 'fs'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -285,4 +286,39 @@ test('pyYouwol.admin.projects.runStep todo-app-js', async () => {
     )
     expect(artifacts).toBeTruthy()
     expect(steps).toBeTruthy()
+})
+
+test('pyYouwol.admin.projects.status with errors', async () => {
+    const test$ = pyYouwol.admin.projects.status$().pipe(
+        raiseHTTPErrors(),
+        map((resp) => {
+            const projectName = uniqueProjectName('project-error')
+            const projectsPath = resp.results[0].path
+                .split('/')
+                .slice(0, -1)
+                .join('/')
+            const projectPath = `${projectsPath}/${projectName}`
+            fs.mkdirSync(`${projectPath}/.yw_pipeline/`, {
+                recursive: true,
+            })
+            fs.writeFileSync(
+                `${projectPath}/.yw_pipeline/yw_pipeline.py`,
+                'import foo',
+            )
+            return projectPath
+        }),
+        mergeMap((projectsPath) =>
+            pyYouwol.admin.projects.status$().pipe(
+                raiseHTTPErrors(),
+                map((resp) => ({ resp: resp, projectsPath })),
+            ),
+        ),
+        tap(({ resp, projectsPath }) => {
+            const importExceptions = resp.failures.importExceptions
+            expect(importExceptions).toHaveLength(1)
+            expect(importExceptions[0].message).toBe("No module named 'foo'")
+            expect(importExceptions[0].path).toBe(projectsPath)
+        }),
+    )
+    await firstValueFrom(test$)
 })
