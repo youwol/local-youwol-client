@@ -1,6 +1,5 @@
 from youwol.app.environment import YouwolEnvironment
-from youwol.app.environment.models import IPipelineFactory
-from youwol.app.environment.models_project import JsBundle, Link, Pipeline
+from youwol.app.environment.models_project import JsBundle, Link, Pipeline, IPipelineFactory
 from youwol.pipelines.pipeline_typescript_weback_npm import pipeline, PipelineConfig
 from youwol.utils.context import Context
 
@@ -11,7 +10,6 @@ class PipelineFactory(IPipelineFactory):
 
     async def get(self, env: YouwolEnvironment, context: Context) -> Pipeline:
         config = PipelineConfig(
-            includeConsistencyTest=True,
             target=JsBundle(
                 links=[
                     Link(name="doc", url="dist/docs/index.html"),
