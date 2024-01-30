@@ -3,6 +3,7 @@ import {
     HTTPResponse$,
     RootRouter,
     WebSocketClient,
+    WebSocketOptions,
     WebSocketResponse$,
 } from '@youwol/http-primitives'
 import { combineLatest } from 'rxjs'
@@ -12,12 +13,18 @@ import { ContextMessage, HealthzResponse } from './interfaces'
 import { AdminRouter } from './routers/admin.router'
 
 export class WsRouter {
-    private readonly _log = new WebSocketClient<ContextMessage>(
-        `ws://${window.location.host}/ws-logs`,
-    )
-    private readonly _data = new WebSocketClient<ContextMessage>(
-        `ws://${window.location.host}/ws-data`,
-    )
+    private readonly _log: WebSocketClient<ContextMessage>
+    private readonly _data: WebSocketClient<ContextMessage>
+    constructor(params: WebSocketOptions = {}) {
+        this._log = new WebSocketClient<ContextMessage>(
+            `ws://${window.location.host}/ws-logs`,
+            params,
+        )
+        this._data = new WebSocketClient<ContextMessage>(
+            `ws://${window.location.host}/ws-data`,
+            params,
+        )
+    }
     startWs$() {
         return combineLatest(
             [this._data, this._log].map((channel) => {
