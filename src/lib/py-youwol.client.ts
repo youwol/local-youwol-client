@@ -6,8 +6,8 @@ import {
     WebSocketOptions,
     WebSocketResponse$,
 } from '@youwol/http-primitives'
-import { combineLatest } from 'rxjs'
-import { take } from 'rxjs/operators'
+import { combineLatest, distinctUntilChanged, Observable } from 'rxjs'
+import { map, take } from 'rxjs/operators'
 
 import { ContextMessage, HealthzResponse } from './interfaces'
 import { AdminRouter } from './routers/admin.router'
@@ -15,6 +15,8 @@ import { AdminRouter } from './routers/admin.router'
 export class WsRouter {
     private readonly _log: WebSocketClient<ContextMessage>
     private readonly _data: WebSocketClient<ContextMessage>
+    public readonly connected$: Observable<boolean>
+
     constructor(params: WebSocketOptions = {}) {
         this._log = new WebSocketClient<ContextMessage>(
             `ws://${window.location.host}/ws-logs`,
@@ -23,6 +25,14 @@ export class WsRouter {
         this._data = new WebSocketClient<ContextMessage>(
             `ws://${window.location.host}/ws-data`,
             params,
+        )
+        this.connected$ = combineLatest([
+            this._log.connected$.pipe(distinctUntilChanged()),
+            this._data.connected$.pipe(distinctUntilChanged()),
+        ]).pipe(
+            map(([logConnected, dataConnected]) => {
+                return logConnected && dataConnected
+            }),
         )
     }
     startWs$() {
