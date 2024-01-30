@@ -1298,13 +1298,13 @@
   resolved "https://registry.yarnpkg.com/@youwol/http-clients/-/http-clients-3.0.0.tgz#13c1f72666a1402c45f559cde0117e37d5ced192"
   integrity sha512-QQq/dzAklzgSHjhbPPyVH0xmIyJ/5eORfp+F0JkLOfNQfU4qr0cFzfl2Ss+1oYjOLPJQKphsGvYD6fZmHOe9mA==
   dependencies:
-    "@youwol/http-primitives" "^0.2.0"
+    "@youwol/http-primitives" "^0.2.2"
     rxjs "^7.5.6"
 
-"@youwol/http-primitives@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@youwol/http-primitives/-/http-primitives-0.2.0.tgz#ef4f8946e330942be8a1ba8fb170ac20b2960c93"
-  integrity sha512-DYoO424yJHEgBdVEOFJhzlDl9rd5MN2tcXU5Mj7jFZvMNIKKYquIN875gYw5vgv4XMNDc+zjIfbYmt6Y77m0pQ==
+"@youwol/http-primitives@^0.2.2":
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/@youwol/http-primitives/-/http-primitives-0.2.2.tgz#7127db7a61532ec9fdd185893f7ba71593c412cb"
+  integrity sha512-ZoXhBcsV5ZcK4LJNnD7A3Tdd/oiSWEKgTiMNk+jMbUY1MJ4OQPdQ8aLh7NyFFPlYWA+mSAN9d/o+PCfWmf9Ffw==
   dependencies:
     rxjs "^7.5.6"
 

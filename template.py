@@ -20,7 +20,7 @@ template = Template(
     dependencies=Dependencies(
         runTime=RunTimeDeps(
             externals={
-                "@youwol/http-primitives": "^0.2.0",
+                "@youwol/http-primitives": "^0.2.2",
                 "rxjs": "^7.5.6"
             }
         ),
