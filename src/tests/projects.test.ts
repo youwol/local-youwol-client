@@ -7,9 +7,8 @@ import { PyYouwolClient } from '../lib'
 
 import {
     expectArtifacts$,
-    expectBuildStep,
+    expectPackageStep,
     expectFlowStatus,
-    expectInitStep,
     expectPipelineStepEvents$,
     expectProjectsStatus,
     expectProjectStatus,
@@ -214,16 +213,10 @@ test('pyYouwol.admin.projects.runStep new project', async () => {
     expectArtifacts$(pyYouwol, projectId)
     const runs$ = of(0).pipe(
         mergeMap(() => {
-            return run$(newProjectName, 'init')
+            return run$(newProjectName, 'package')
         }),
         tap((resp) => {
-            expectInitStep(resp)
-        }),
-        mergeMap(() => {
-            return run$(newProjectName, 'build')
-        }),
-        tap((resp) => {
-            expectBuildStep(resp)
+            expectPackageStep(resp)
         }),
         mergeMap(() => {
             return run$(newProjectName, 'cdn-local')
@@ -254,16 +247,10 @@ test('pyYouwol.admin.projects.runStep todo-app-js', async () => {
     expectArtifacts$(pyYouwol, projectId)
     const runs$ = of(0).pipe(
         mergeMap(() => {
-            return run$(projectTodoAppName, 'init')
+            return run$(projectTodoAppName, 'package')
         }),
         tap((resp) => {
-            expectInitStep(resp)
-        }),
-        mergeMap(() => {
-            return run$(projectTodoAppName, 'build')
-        }),
-        tap((resp) => {
-            expectBuildStep(resp)
+            expectPackageStep(resp)
         }),
         mergeMap(() => {
             return run$(projectTodoAppName, 'cdn-local', false)

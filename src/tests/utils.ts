@@ -12,14 +12,10 @@ export function uniqueProjectName(prefix: string) {
     }-${now.getDate()}_${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`
 }
 
-export function expectInitStep(stepResp) {
-    expect(stepResp).toBeTruthy()
-}
-
-export function expectBuildStep(stepResp) {
-    expect(stepResp.manifest.files).toHaveLength(3)
+export function expectPackageStep(stepResp) {
+    expect(stepResp.manifest.files).toHaveLength(8)
     expect(stepResp.artifacts).toHaveLength(1)
-    expect(stepResp.artifacts[0].id).toBe('dist')
+    expect(stepResp.artifacts[0].id).toBe('package')
 }
 
 export function expectPublishLocal(stepResp, succeeded: boolean) {
@@ -48,7 +44,7 @@ export function expectFlowStatus(resp, projectName) {
     expect(resp.projectId).toEqual(
         Buffer.from(projectName, 'utf8').toString('base64'),
     )
-    expect(resp.steps).toHaveLength(3)
+    expect(resp.steps).toHaveLength(2)
     resp.steps.forEach((step) => {
         expectAttributes(step, ['projectId', 'flowId', 'stepId', 'artifacts'])
         expect(step.status).toBe('none')
@@ -107,22 +103,20 @@ export function expectUpdateStatus(resp) {
 export function expectPipelineStepEvents$(pyYouwol: PyYouwolClient) {
     return pyYouwol.admin.projects.webSocket.stepEvent$().pipe(
         map((ev) => ev.data),
-        take(12),
+        take(7),
         reduce((acc, e) => [...acc, e], []),
         tap((events) => {
-            expect(events).toHaveLength(12)
-            expect(events.filter((ev) => ev.stepId == 'init')).toHaveLength(3)
-            expect(events.filter((ev) => ev.stepId == 'build')).toHaveLength(4)
+            expect(events).toHaveLength(7)
+            expect(events.filter((ev) => ev.stepId == 'package')).toHaveLength(
+                3,
+            )
             expect(
                 events.filter((ev) => ev.stepId == 'cdn-local'),
-            ).toHaveLength(5)
-            /*expect(
-                events.filter((ev) => ev.stepId == 'publish-remote'),
-            ).toHaveLength(6)*/
+            ).toHaveLength(4)
             expect(
                 events.filter((ev) => ev.event == 'runStarted'),
-            ).toHaveLength(3)
-            expect(events.filter((ev) => ev.event == 'runDone')).toHaveLength(3)
+            ).toHaveLength(2)
+            expect(events.filter((ev) => ev.event == 'runDone')).toHaveLength(2)
         }),
     )
 }
@@ -137,7 +131,7 @@ export function expectArtifacts$(pyYouwol: PyYouwolClient, projectId: string) {
         tap(([respHttp, respWs]) => {
             expectAttributes(respHttp, ['artifacts'])
             expect(respHttp.artifacts).toHaveLength(1)
-            expect(respHttp.artifacts[0].id).toBe('dist')
+            expect(respHttp.artifacts[0].id).toBe('package')
             expectAttributes(respWs.attributes, ['projectId', 'flowId'])
             expect(respWs.data).toEqual(respHttp)
         }),
