@@ -150,4 +150,11 @@ test('pyYouwol.admin.system.documentation/youwol/app/environment', async () => {
     expect(resp.functions).toBeInstanceOf(Array)
     expect(resp.docstring).toBeInstanceOf(Array)
     expect(resp.path).toBe('app.environment')
+    const youwolEnvironment = resp.classes.find((classResp) => {
+        return classResp.name == 'YouwolEnvironment'
+    })
+    expect(youwolEnvironment).toBeTruthy()
+    expect(youwolEnvironment.bases).toHaveLength(1)
+    expect(youwolEnvironment.bases[0].name).toBe('BaseModel')
+    expect(youwolEnvironment.bases[0].path).toBe('pydantic.BaseModel')
 })
