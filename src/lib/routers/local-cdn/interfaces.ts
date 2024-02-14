@@ -1,3 +1,5 @@
+export type WebpmLibraryType = 'js/wasm' | 'backend'
+
 export interface PackageVersionInfo {
     version: string
     fingerprint: string
@@ -9,14 +11,14 @@ export type UpdateStatus =
     | 'remoteAhead'
     | 'localAhead'
 
-export interface CdnVersion {
-    version: string
-    filesCount: number
-    entryPointSize: number // in bytes
-}
-
 export interface CdnVersionLight {
     version: string
+    type: WebpmLibraryType
+}
+
+export interface CdnVersion extends CdnVersionLight {
+    filesCount: number
+    entryPointSize: number // in bytes
 }
 
 export interface CdnPackage {
