@@ -32,6 +32,12 @@ export type QueryRootLogsResponse = LogsResponse
 
 export type QueryLogsResponse = LogsResponse
 
+export type BackendLogsResponse = {
+    logs: LogResponse[]
+    server_outputs: string[]
+    install_outputs?: string[]
+}
+
 export interface DownloadEvent {
     kind: string
     rawId: string
@@ -177,6 +183,22 @@ export class SystemRouter extends Router {
                 method: 'POST',
                 json: body,
             },
+            callerOptions,
+        })
+    }
+
+    queryBackendLogs$({
+        name,
+        version,
+        callerOptions,
+    }: {
+        name: string
+        version: string
+        callerOptions?: CallerRequestOptions
+    }): HTTPResponse$<BackendLogsResponse> {
+        return this.send$({
+            command: 'query',
+            path: `/backends/${name}/${version}/logs`,
             callerOptions,
         })
     }
