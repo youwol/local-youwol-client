@@ -90,6 +90,14 @@ export interface YouwolEnvironment {
     cache: { [key: string]: unknown }
 
     tokensCache: DeadlinedCache[]
+
+    proxiedBackends: ProxiedBackend[]
+}
+
+export class ProxiedBackend {
+    name: string
+    version: string
+    port: string
 }
 
 export interface UserInfo {
