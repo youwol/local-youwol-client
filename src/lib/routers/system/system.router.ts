@@ -38,10 +38,39 @@ export type BackendLogsResponse = {
     install_outputs?: string[]
 }
 
+export interface UninstallResponse {
+    name: string
+    version: string
+    backendTerminated: boolean
+    wasInstalled: boolean
+}
+
+export interface TerminateResponse {
+    name: string
+    version: string
+    wasRunning: boolean
+}
+
 export interface DownloadEvent {
     kind: string
     rawId: string
     type: DownloadEventType
+}
+
+export type InstallBackendEventType = 'started' | 'failed' | 'succeeded'
+
+export interface InstallBackendEvent {
+    installId: string
+    name: string
+    version: string
+    event: InstallBackendEventType
+}
+
+export interface BackendResponse {
+    name: string
+    version: string
+    url: string
+    method: string
 }
 
 export type ClearLogsResponse = Record<string, never>
@@ -76,6 +105,89 @@ class WebSocketAPI {
                 withAttributes: filters,
             }),
             filter((message: ContextMessage<DownloadEvent>) => {
+                return Object.entries(filters)
+                    .map(([k, v]) => {
+                        return message.data[k] == v
+                    })
+                    .reduce((acc, e) => acc && e, true)
+            }),
+        )
+    }
+
+    installBackendEvent$(
+        filters: {
+            name?: string
+            version?: Kind
+        } = {},
+    ): WebSocketResponse$<InstallBackendEvent> {
+        return this.ws.data$.pipe(
+            filterCtxMessage<InstallBackendEvent>({
+                withLabels: ['InstallBackendEvent'],
+                withAttributes: filters,
+            }),
+            filter((message: ContextMessage<InstallBackendEvent>) => {
+                return Object.entries(filters)
+                    .map(([k, v]) => {
+                        return message.data[k] == v
+                    })
+                    .reduce((acc, e) => acc && e, true)
+            }),
+        )
+    }
+
+    installBackendStdOut$(
+        filters: {
+            name?: string
+            version?: string
+            installId?: string
+        } = {},
+    ): WebSocketResponse$<Record<never, never>> {
+        return this.ws.log$.pipe(
+            filterCtxMessage<Record<never, never>>({
+                withLabels: ['Label.INSTALL_BACKEND_SH'],
+                withAttributes: filters,
+            }),
+            filter((message: ContextMessage<Record<never, never>>) => {
+                return Object.entries(filters)
+                    .map(([k, v]) => {
+                        return message.data[k] == v
+                    })
+                    .reduce((acc, e) => acc && e, true)
+            }),
+        )
+    }
+    startBackendStdOut$(
+        filters: {
+            name?: string
+            version?: Kind
+        } = {},
+    ): WebSocketResponse$<InstallBackendEvent> {
+        return this.ws.log$.pipe(
+            filterCtxMessage<InstallBackendEvent>({
+                withLabels: ['Label.START_BACKEND_SH'],
+                withAttributes: filters,
+            }),
+            filter((message: ContextMessage<InstallBackendEvent>) => {
+                return Object.entries(filters)
+                    .map(([k, v]) => {
+                        return message.data[k] == v
+                    })
+                    .reduce((acc, e) => acc && e, true)
+            }),
+        )
+    }
+    backendResponse$(
+        filters: {
+            name?: string
+            version?: Kind
+        } = {},
+    ): WebSocketResponse$<BackendResponse> {
+        return this.ws.data$.pipe(
+            filterCtxMessage<BackendResponse>({
+                withLabels: ['BackendResponse'],
+                withAttributes: filters,
+            }),
+            filter((message: ContextMessage<BackendResponse>) => {
                 return Object.entries(filters)
                     .map(([k, v]) => {
                         return message.data[k] == v
@@ -213,6 +325,38 @@ export class SystemRouter extends Router {
         return this.send$({
             command: 'query',
             path: `/documentation/${path}`,
+            callerOptions,
+        })
+    }
+
+    uninstallBackend$({
+        name,
+        version,
+        callerOptions,
+    }: {
+        name: string
+        version: string
+        callerOptions?: CallerRequestOptions
+    }): HTTPResponse$<UninstallResponse> {
+        return this.send$({
+            command: 'delete',
+            path: `/backends/${name}/${version}/uninstall`,
+            callerOptions,
+        })
+    }
+
+    terminateBackend$({
+        name,
+        version,
+        callerOptions,
+    }: {
+        name: string
+        version: string
+        callerOptions?: CallerRequestOptions
+    }): HTTPResponse$<TerminateResponse> {
+        return this.send$({
+            command: 'delete',
+            path: `/backends/${name}/${version}/terminate`,
             callerOptions,
         })
     }
