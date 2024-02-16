@@ -1,7 +1,7 @@
 
 const runTimeDependencies = {
     "externals": {
-        "@youwol/http-primitives": "^0.2.2",
+        "@youwol/http-primitives": "^0.2.3",
         "rxjs": "^7.5.6"
     },
     "includedInBundle": {}
