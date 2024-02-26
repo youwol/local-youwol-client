@@ -54,7 +54,7 @@ const entries = {
 export const setup = {
     name:'@youwol/local-youwol-client',
         assetId:'QHlvdXdvbC9sb2NhbC15b3V3b2wtY2xpZW50',
-    version:'0.2.6-wip',
+    version:'0.2.6',
     shortDescription:"Client for local py-youwol",
     developerDocumentation:'https://platform.youwol.com/applications/@youwol/cdn-explorer/latest?package=@youwol/local-youwol-client&tab=doc',
     npmPackage:'https://www.npmjs.com/package/@youwol/local-youwol-client',
@@ -100,7 +100,7 @@ export const setup = {
         const parameters = installParameters || {}
         const scripts = [
             ...(parameters.scripts || []),
-            `@youwol/local-youwol-client#0.2.6-wip~dist/@youwol/local-youwol-client/${entry.name}.js`
+            `@youwol/local-youwol-client#0.2.6~dist/@youwol/local-youwol-client/${entry.name}.js`
         ]
         const modules = [
             ...(parameters.modules || []),
