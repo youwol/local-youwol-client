@@ -55,6 +55,12 @@ export interface DocClassResponse {
     inheritedBy: DocTypeResponse[]
 }
 
+export interface DocFileResponse {
+    name: string
+    docstring: DocDocstringSectionResponse[]
+    path: string
+}
+
 export interface DocChildModuleResponse {
     name: string
     path: string
@@ -76,4 +82,5 @@ export interface DocModuleResponse {
     attributes: DocAttributeResponse[]
     classes: DocClassResponse[]
     functions: DocFunctionResponse[]
+    files: DocFileResponse[]
 }

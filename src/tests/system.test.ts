@@ -148,6 +148,7 @@ test('pyYouwol.admin.system.documentation/youwol/app/environment', async () => {
     expect(resp.classes).toBeInstanceOf(Array)
     expect(resp.attributes).toBeInstanceOf(Array)
     expect(resp.functions).toBeInstanceOf(Array)
+    expect(resp.files).toBeInstanceOf(Array)
     expect(resp.docstring).toBeInstanceOf(Array)
     expect(resp.path).toBe('app.environment')
     const youwolEnvironment = resp.classes.find((classResp) => {
