@@ -73,6 +73,27 @@ export function expectProjectStatus(resp) {
 }
 
 export function expectEnvironment(resp) {
+    expectAttributes(resp, ['youwolEnvironment'])
+    expectAttributes(resp.configuration, [
+        'commands',
+        'currentConnection',
+        'customMiddlewares',
+        'httpPort',
+        'pathsBook',
+        'proxiedBackends',
+        'remotes',
+    ])
+    expectAttributes(resp.configuration.currentConnection, ['envId', 'authId'])
+    expectAttributes(resp.configuration.remotes[0], [
+        'envId',
+        'host',
+        'authentications',
+    ])
+    expectAttributes(resp.configuration.remotes[0].authentications[0], [
+        'authId',
+        'type',
+    ])
+    // Below expectations are related to deprecated attributes
     expectAttributes(resp, [
         'configuration',
         'users',
@@ -80,13 +101,6 @@ export function expectEnvironment(resp) {
         'remoteGatewayInfo',
         'remotesInfo',
     ])
-    expectAttributes(resp.configuration, [
-        'httpPort',
-        'commands',
-        'currentConnection',
-        'pathsBook',
-    ])
-    expectAttributes(resp.configuration.currentConnection, ['envId', 'authId'])
 }
 
 export function expectUpdateStatus(resp) {
