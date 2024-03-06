@@ -73,7 +73,12 @@ export function expectProjectStatus(resp) {
 }
 
 export function expectEnvironment(resp) {
-    expectAttributes(resp, ['youwolEnvironment'])
+    /**
+     * Test are checking the compliant with py-youwol 0.1.8 release,
+     * Uncomment lines and replace 'configuration' by 'youwolEnvironment' once the release is done.
+     * See TG-2200
+     */
+    expectAttributes(resp, ['configuration'])
     expectAttributes(resp.configuration, [
         'commands',
         'currentConnection',
@@ -81,18 +86,18 @@ export function expectEnvironment(resp) {
         'httpPort',
         'pathsBook',
         'proxiedBackends',
-        'remotes',
+        // 'remotes',
     ])
     expectAttributes(resp.configuration.currentConnection, ['envId', 'authId'])
-    expectAttributes(resp.configuration.remotes[0], [
-        'envId',
-        'host',
-        'authentications',
-    ])
-    expectAttributes(resp.configuration.remotes[0].authentications[0], [
-        'authId',
-        'type',
-    ])
+    // expectAttributes(resp.youwolEnvironment.remotes[0], [
+    //     'envId',
+    //     'host',
+    //     'authentications',
+    // ])
+    // expectAttributes(resp.youwolEnvironment.remotes[0].authentications[0], [
+    //     'authId',
+    //     'type',
+    // ])
     // Below expectations are related to deprecated attributes
     expectAttributes(resp, [
         'configuration',
