@@ -71,27 +71,32 @@ export interface Projects {
     templates?: ProjectTemplate[]
 }
 
+export type AuthenticationType = 'BrowserAuth' | 'DirectAuth'
+
+export class Authentication {
+    authId: string
+    type: AuthenticationType
+}
+
+export interface CloudEnvironment {
+    envId: string
+    host: string
+    authentications: Authentication[]
+}
+
+export interface Connection {
+    envId: string
+    authId: string
+}
 export interface YouwolEnvironment {
-    availableProfiles: string[]
-    httpPort: number
-    openidHost: string
-    activeProfile?: string
-
     commands: { [key: string]: Command }
-
-    userEmail?: string
-    selectedRemote?: string
-
+    currentConnection: Connection
+    customMiddlewares: unknown[]
+    httpPort: number
     pathsBook: PathsBook
-
     projects?: Projects
-
-    customDispatches: CustomDispatch[]
-    cache: { [key: string]: unknown }
-
-    tokensCache: DeadlinedCache[]
-
     proxiedBackends: ProxiedBackend[]
+    remotes: CloudEnvironment[]
 }
 
 export class ProxiedBackend {
@@ -114,10 +119,26 @@ export interface RemoteGatewayInfo {
 }
 
 export interface EnvironmentStatusResponse {
+    /**
+     * @deprecated
+     */
     configuration: YouwolEnvironment
+    youwolEnvironment: YouwolEnvironment
+    /**
+     * @deprecated
+     */
     users: string[]
+    /**
+     * @deprecated
+     */
     userInfo: UserInfo
+    /**
+     * @deprecated
+     */
     remoteGatewayInfo?: RemoteGatewayInfo
+    /**
+     * @deprecated
+     */
     remotesInfo: RemoteGatewayInfo[]
 }
 export type GetEnvironmentStatusResponse = EnvironmentStatusResponse
