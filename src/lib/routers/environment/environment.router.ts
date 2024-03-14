@@ -104,7 +104,7 @@ export class EnvironmentRouter extends Router {
         callerOptions,
     }: {
         callerOptions?: CallerRequestOptions
-    } = {}) {
+    } = {}): HTTPResponse$<EnvironmentStatusResponse> {
         return this.send$({
             command: 'update',
             path: `/configuration`,
