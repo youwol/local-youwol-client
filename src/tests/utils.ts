@@ -4,6 +4,7 @@ import { map, mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 import { readFileSync } from 'fs'
 import { CdnBackend } from '@youwol/http-clients'
+import { EnvironmentStatusResponse } from '../lib/routers/environment'
 
 export function uniqueProjectName(prefix: string) {
     const now = new Date()
@@ -72,32 +73,30 @@ export function expectProjectStatus(resp) {
     ])
 }
 
-export function expectEnvironment(resp) {
-    /**
-     * Test are checking the compliant with py-youwol 0.1.8 release,
-     * Uncomment lines and replace 'configuration' by 'youwolEnvironment' once the release is done.
-     * See TG-2200
-     */
-    expectAttributes(resp, ['configuration'])
-    expectAttributes(resp.configuration, [
+export function expectEnvironment(resp: EnvironmentStatusResponse) {
+    expectAttributes(resp, ['youwolEnvironment'])
+    expectAttributes(resp.youwolEnvironment, [
         'commands',
         'currentConnection',
         'customMiddlewares',
         'httpPort',
         'pathsBook',
         'proxiedBackends',
-        // 'remotes',
+        'remotes',
     ])
-    expectAttributes(resp.configuration.currentConnection, ['envId', 'authId'])
-    // expectAttributes(resp.youwolEnvironment.remotes[0], [
-    //     'envId',
-    //     'host',
-    //     'authentications',
-    // ])
-    // expectAttributes(resp.youwolEnvironment.remotes[0].authentications[0], [
-    //     'authId',
-    //     'type',
-    // ])
+    expectAttributes(resp.youwolEnvironment.currentConnection, [
+        'envId',
+        'authId',
+    ])
+    expectAttributes(resp.youwolEnvironment.remotes[0], [
+        'envId',
+        'host',
+        'authentications',
+    ])
+    expectAttributes(resp.youwolEnvironment.remotes[0].authentications[0], [
+        'authId',
+        'type',
+    ])
     // Below expectations are related to deprecated attributes
     expectAttributes(resp, [
         'configuration',
