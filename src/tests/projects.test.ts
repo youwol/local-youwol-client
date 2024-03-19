@@ -371,3 +371,25 @@ test('pyYouwol.admin.projects.status with errors', async () => {
     )
     await firstValueFrom(test$)
 })
+
+test('index projects', async () => {
+    const test$ = pyYouwol.admin.projects.status$().pipe(
+        raiseHTTPErrors(),
+        mergeMap(() => {
+            // The following change won't be caught by the ProjectsWatcher thread,
+            // the only way to get it (for now) is to perform a re-indexation.
+            return new PyYouwolClient().admin.customCommands.doPost$({
+                name: 'exec-shell',
+                body: {
+                    command:
+                        "sed -i 's/todo-app-js/todo-app-foo/g' projects/todo-app-js/package.json",
+                },
+            })
+        }),
+        mergeMap(() => pyYouwol.admin.projects.index$()),
+        raiseHTTPErrors(),
+    )
+    const r = await firstValueFrom(test$)
+    const p = r.results.find((p) => p.name === '@youwol/todo-app-foo')
+    expect(p).toBeTruthy()
+})
