@@ -97,6 +97,16 @@ export function expectEnvironment(resp: EnvironmentStatusResponse) {
         'authId',
         'type',
     ])
+
+    expect(resp.youwolEnvironment.projects.finders).toHaveLength(1)
+    expectAttributes(resp.youwolEnvironment.projects.finders[0], [
+        'name',
+        'fromPath',
+        'lookUpDepth',
+        'lookUpIgnore',
+        'watch',
+    ])
+
     // Below expectations are related to deprecated attributes
     expectAttributes(resp, [
         'configuration',

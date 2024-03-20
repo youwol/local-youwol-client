@@ -67,7 +67,16 @@ export interface ProjectTemplate {
     parameters: { [k: string]: string }
 }
 
+export interface ProjectFinders {
+    name: string
+    fromPath: string
+    lookUpDepth: number
+    lookUpIgnore: string[]
+    watch: boolean
+}
+
 export interface Projects {
+    finders: ProjectFinders[]
     templates?: ProjectTemplate[]
 }
 

@@ -1,9 +1,16 @@
 import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
 
 import { btoa } from 'buffer'
-import { combineLatest, firstValueFrom, Observable, of } from 'rxjs'
+import {
+    combineLatest,
+    firstValueFrom,
+    Observable,
+    of,
+    OperatorFunction,
+    ReplaySubject,
+} from 'rxjs'
 import { filter, map, mergeMap, reduce, take, tap } from 'rxjs/operators'
-import { PyYouwolClient } from '../lib'
+import { PyYouwolClient, Routers } from '../lib'
 
 import {
     expectArtifacts$,
@@ -52,8 +59,56 @@ function assertBeforeAllFinished() {
 let newProjectName: string
 let privateGroupId: string
 const projectTodoAppName = '@youwol/todo-app-js'
+
+/**
+ * Beginning with version 0.1.9 of youwol, invoking `GET:projects/status` no longer directly initiates re-indexing of
+ * projects. The majority of tests in this file depend on real-time updates captured by the `ProjectsWatcher` thread.
+ *
+ * The purpose of `waitProjects` is to pause until the watcher detects the anticipated changes.
+ *
+ * It is recommended to use a replay subject for `projectsStatus$`, which should be set up before any project updates
+ * occur. To establish this, employ the `createProjectsStatus$` function at the start of your test.
+ */
+function waitProjects<T>({
+    readyWhen,
+    projectsStatus$,
+}: {
+    readyWhen: (status: Routers.Projects.ProjectsLoadingResults) => boolean
+    projectsStatus$: Observable<Routers.Projects.ProjectsLoadingResults>
+}): OperatorFunction<T, T> {
+    return (obs: Observable<T>) => {
+        return obs.pipe(
+            mergeMap((d: T) =>
+                projectsStatus$.pipe(map((status) => ({ d, status }))),
+            ),
+            filter(({ status }) => {
+                return readyWhen(status)
+            }),
+            take(1),
+            map(({ d }) => d),
+        )
+    }
+}
+
+function createProjectsStatus$() {
+    const projectsStatus$ =
+        new ReplaySubject<Routers.Projects.ProjectsLoadingResults>()
+    pyYouwol.admin.projects.webSocket.status$().subscribe((d) => {
+        projectsStatus$.next(d.data)
+    })
+    return projectsStatus$
+}
+
 beforeAll(async () => {
     newProjectName = uniqueProjectName('todo-app-js')
+
+    const projectsStatus$ = createProjectsStatus$()
+    const readyWhen = (status: Routers.Projects.ProjectsLoadingResults) => {
+        return ['@youwol/todo-app-js', newProjectName].every((name) =>
+            status.results.some((r) => r.name === name),
+        )
+    }
+
     const beforeAll$ = setup$({
         localOnly: true,
         email: 'int_tests_yw-users@test-user',
@@ -83,6 +138,7 @@ beforeAll(async () => {
                 name: 'purge-downloads',
             })
         }),
+        waitProjects({ readyWhen, projectsStatus$ }),
         mergeMap(() => {
             return new AssetsGateway.Client().accounts.getSessionDetails$()
         }),
@@ -276,6 +332,8 @@ test('pyYouwol.admin.projects.runStep todo-app-js', async () => {
 })
 
 test('pyYouwol.admin.projects.status with errors', async () => {
+    const projectsStatus$ = createProjectsStatus$()
+
     const test$ = pyYouwol.admin.projects.status$().pipe(
         raiseHTTPErrors(),
         map((resp) => {
@@ -294,6 +352,10 @@ test('pyYouwol.admin.projects.status with errors', async () => {
             )
             return projectPath
         }),
+        waitProjects({
+            readyWhen: (r) => r.failures.importExceptions.length === 1,
+            projectsStatus$,
+        }),
         mergeMap((projectsPath) =>
             pyYouwol.admin.projects.status$().pipe(
                 raiseHTTPErrors(),
@@ -308,4 +370,26 @@ test('pyYouwol.admin.projects.status with errors', async () => {
         }),
     )
     await firstValueFrom(test$)
+})
+
+test('index projects', async () => {
+    const test$ = pyYouwol.admin.projects.status$().pipe(
+        raiseHTTPErrors(),
+        mergeMap(() => {
+            // The following change won't be caught by the ProjectsWatcher thread,
+            // the only way to get it (for now) is to perform a re-indexation.
+            return new PyYouwolClient().admin.customCommands.doPost$({
+                name: 'exec-shell',
+                body: {
+                    command:
+                        "sed -i 's/todo-app-js/todo-app-foo/g' projects/todo-app-js/package.json",
+                },
+            })
+        }),
+        mergeMap(() => pyYouwol.admin.projects.index$()),
+        raiseHTTPErrors(),
+    )
+    const r = await firstValueFrom(test$)
+    const p = r.results.find((p) => p.name === '@youwol/todo-app-foo')
+    expect(p).toBeTruthy()
 })

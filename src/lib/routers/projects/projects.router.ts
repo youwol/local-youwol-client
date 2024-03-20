@@ -122,6 +122,23 @@ export class ProjectsRouter extends Router {
         })
     }
 
+    /**
+     * Index projects.
+     *
+     * @param callerOptions
+     */
+    index$({
+        callerOptions,
+    }: {
+        callerOptions?: CallerRequestOptions
+    } = {}): HTTPResponse$<GetProjectsStatusResponse> {
+        return this.send$({
+            command: 'update',
+            path: `/index`,
+            callerOptions,
+        })
+    }
+
     getProjectStatus$({
         projectId,
         callerOptions,
