@@ -11,6 +11,7 @@ import { map, take } from 'rxjs/operators'
 
 import { ContextMessage, HealthzResponse } from './interfaces'
 import { AdminRouter } from './routers/admin.router'
+import { PythonRouter } from './routers/python'
 
 export class WsRouter {
     private readonly _log: WebSocketClient<ContextMessage>
@@ -52,6 +53,7 @@ export class WsRouter {
 
 export class PyYouwolClient extends RootRouter {
     public readonly admin: AdminRouter
+    public readonly python: PythonRouter
 
     static ws = new WsRouter()
 
@@ -65,6 +67,7 @@ export class PyYouwolClient extends RootRouter {
             headers,
         })
         this.admin = new AdminRouter(this, PyYouwolClient.ws)
+        this.python = new PythonRouter(this)
     }
 
     /**
