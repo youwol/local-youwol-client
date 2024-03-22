@@ -1,4 +1,4 @@
-export type WebpmLibraryType = 'js/wasm' | 'backend'
+export type WebpmLibraryType = 'js/wasm' | 'backend' | 'pyodide'
 
 export interface PackageVersionInfo {
     version: string
