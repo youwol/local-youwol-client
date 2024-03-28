@@ -89,3 +89,20 @@ test('pyYouwol.admin.environment.customDispatches', async () => {
     )
     await firstValueFrom(test$)
 })
+
+test('pyYouwol.admin.environment.browser-cache', async () => {
+    const test$ = pyYouwol.admin.environment.getBrowserCacheStatus$().pipe(
+        raiseHTTPErrors(),
+        tap((resp) => {
+            expectAttributes(resp, ['sessionKey', 'file', 'items'])
+            expect(resp.items.length).toBeGreaterThanOrEqual(0)
+        }),
+        mergeMap(() => {
+            return pyYouwol.admin.environment.clearBrowserCache({
+                body: { file: true, memory: true },
+            })
+        }),
+        raiseHTTPErrors(),
+    )
+    await firstValueFrom(test$)
+})

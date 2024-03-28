@@ -7,6 +7,9 @@ import {
 } from '@youwol/http-primitives'
 
 import {
+    BrowserCacheStatusResponse,
+    ClearBrowserCacheBody,
+    ClearBrowserCacheResponse,
     EnvironmentStatusResponse,
     GetEnvironmentStatusResponse,
     LoginResponse,
@@ -161,6 +164,35 @@ export class EnvironmentRouter extends Router {
         return this.send$({
             command: 'update',
             path: `/upload/${assetId}`,
+            callerOptions,
+        })
+    }
+
+    getBrowserCacheStatus$({
+        callerOptions,
+    }: {
+        callerOptions?: CallerRequestOptions
+    } = {}): HTTPResponse$<BrowserCacheStatusResponse> {
+        return this.send$({
+            command: 'query',
+            path: `/browser-cache`,
+            callerOptions,
+        })
+    }
+
+    clearBrowserCache({
+        body,
+        callerOptions,
+    }: {
+        body: ClearBrowserCacheBody
+        callerOptions?: CallerRequestOptions
+    }): HTTPResponse$<ClearBrowserCacheResponse> {
+        return this.send$({
+            command: 'delete',
+            path: `/browser-cache`,
+            nativeRequestOptions: {
+                json: body,
+            },
             callerOptions,
         })
     }
