@@ -168,3 +168,24 @@ export interface QueryCustomDispatchesResponse {
 export type QueryCowSayResponse = string
 
 export class UploadAssetResponse {}
+
+export interface BrowserCacheItem {
+    key: string
+    file: string
+    headers: { [k: string]: string }
+    expirationTime: number
+}
+export interface BrowserCacheStatusResponse {
+    sessionKey: string
+    file?: string
+    items: BrowserCacheItem[]
+}
+
+export interface ClearBrowserCacheBody {
+    memory: boolean
+    file: boolean
+}
+
+export interface ClearBrowserCacheResponse {
+    deleted: number
+}
