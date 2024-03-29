@@ -27,6 +27,7 @@ import { PipelineStepStatusResponse } from '../lib/routers/projects'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 import { AssetsGateway } from '@youwol/http-clients'
 import * as fs from 'fs'
+import * as os from 'os'
 
 const pyYouwol = new PyYouwolClient()
 
@@ -376,13 +377,18 @@ test('index projects', async () => {
     const test$ = pyYouwol.admin.projects.status$().pipe(
         raiseHTTPErrors(),
         mergeMap(() => {
+            const baseCmd =
+                "'s/todo-app-js/todo-app-foo/g' projects/todo-app-js/package.json"
+            const cmd = {
+                darwin: `sed -i '' ${baseCmd}`,
+                linux: `sed -i ${baseCmd}`,
+            }
             // The following change won't be caught by the ProjectsWatcher thread,
             // the only way to get it (for now) is to perform a re-indexation.
             return new PyYouwolClient().admin.customCommands.doPost$({
                 name: 'exec-shell',
                 body: {
-                    command:
-                        "sed -i 's/todo-app-js/todo-app-foo/g' projects/todo-app-js/package.json",
+                    command: cmd[os.platform()],
                 },
             })
         }),
