@@ -9,7 +9,7 @@ import {
     OperatorFunction,
     ReplaySubject,
 } from 'rxjs'
-import { filter, map, mergeMap, reduce, take, tap } from 'rxjs/operators'
+import { filter, map, mergeMap, take, tap } from 'rxjs/operators'
 import { PyYouwolClient, Routers } from '../lib'
 
 import {
@@ -21,9 +21,9 @@ import {
     expectProjectStatus,
     expectPublishLocal,
     uniqueProjectName,
+    run$,
 } from './utils'
 import { setup$ } from './local-youwol-test-setup'
-import { PipelineStepStatusResponse } from '../lib/routers/projects'
 import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
 import { AssetsGateway } from '@youwol/http-clients'
 import * as fs from 'fs'
@@ -208,30 +208,6 @@ test('pyYouwol.admin.projects.flowStatus', async () => {
     expectAttributes(respWs.attributes, ['projectId', 'flowId'])
     expect(respHttp).toEqual(respWs.data)
 })
-
-function run$(
-    projectName: string,
-    stepId: string,
-    onlySuccess = true,
-): Observable<PipelineStepStatusResponse> {
-    return combineLatest([
-        pyYouwol.admin.projects
-            .runStep$({
-                projectId: btoa(projectName),
-                flowId: 'prod',
-                stepId,
-            })
-            .pipe(raiseHTTPErrors()),
-        pyYouwol.admin.projects.webSocket.pipelineStepStatus$({ stepId }).pipe(
-            map((d) => d.data),
-            filter((message) => {
-                return onlySuccess ? message.status === 'OK' : true
-            }),
-            take(1),
-            reduce((acc, e) => [...acc, e], []),
-        ),
-    ]).pipe(map(([_, respWs]) => respWs.find((step) => step.stepId == stepId)))
-}
 
 function checkAsset({
     projectId,

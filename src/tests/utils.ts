@@ -1,10 +1,12 @@
 import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
-import { combineLatest, forkJoin } from 'rxjs'
-import { map, mergeMap, reduce, take, tap } from 'rxjs/operators'
+import { combineLatest, forkJoin, Observable } from 'rxjs'
+import { filter, map, mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
 import { readFileSync } from 'fs'
 import { CdnBackend } from '@youwol/http-clients'
 import { EnvironmentStatusResponse } from '../lib/routers/environment'
+import { PipelineStepStatusResponse } from '../lib/routers/projects'
+import { btoa } from 'buffer'
 
 export function uniqueProjectName(prefix: string) {
     const now = new Date()
@@ -262,4 +264,30 @@ export function uploadPackagesAndCheck$({
             }
         }),
     )
+}
+
+export function run$(
+    projectName: string,
+    stepId: string,
+    onlySuccess = true,
+): Observable<PipelineStepStatusResponse> {
+    const pyYouwol = new PyYouwolClient()
+
+    return combineLatest([
+        pyYouwol.admin.projects
+            .runStep$({
+                projectId: btoa(projectName),
+                flowId: 'prod',
+                stepId,
+            })
+            .pipe(raiseHTTPErrors()),
+        pyYouwol.admin.projects.webSocket.pipelineStepStatus$({ stepId }).pipe(
+            map((d) => d.data),
+            filter((message) => {
+                return onlySuccess ? message.status === 'OK' : true
+            }),
+            take(1),
+            reduce((acc, e) => [...acc, e], []),
+        ),
+    ]).pipe(map(([_, respWs]) => respWs.find((step) => step.stepId == stepId)))
 }
