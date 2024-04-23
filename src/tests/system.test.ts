@@ -60,6 +60,18 @@ test('pyYouwol.admin.system.queryLogs', async () => {
     const resp = await firstValueFrom(test$)
     expectAttributes(resp, ['logs'])
     expect(resp.logs.length).toBeGreaterThan(1)
+    for (const log of resp.logs) {
+        expectAttributes(log, [
+            'contextId',
+            'parentContextId',
+            'text',
+            'attributes',
+            'labels',
+            'data',
+            'level',
+            'timestamp',
+        ])
+    }
 })
 
 /*
