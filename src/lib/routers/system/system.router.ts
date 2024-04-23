@@ -21,7 +21,16 @@ export interface QueryFolderContentResponse {
 }
 
 export interface LogResponse<T = unknown> extends ContextMessage<T> {
+    /**
+     * Deprecated, use 'status'
+     */
     failed?: boolean
+    /**
+     * Deprecated, use 'status'
+     */
+    future?: boolean
+
+    status?: 'Succeeded' | 'Unresolved' | 'Failed'
 }
 
 export interface LogsResponse {
@@ -75,18 +84,7 @@ export interface BackendResponse {
 
 export type ClearLogsResponse = Record<string, never>
 
-export interface Log {
-    level: 'INFO' | 'WARNING' | 'ERROR'
-    attributes: { [k: string]: string }
-    labels: string[]
-    text: string
-    data?: { [k: string]: unknown }
-    contextId: string
-    parentContextId: string
-    timestamp: number
-}
-
-export interface AddLogBody extends Log {
+export interface AddLogBody extends ContextMessage {
     traceUid: string
 }
 export interface AddLogsBody {
