@@ -2,7 +2,6 @@ import { PyYouwolClient, Routers } from '../lib'
 import { delay, tap } from 'rxjs/operators'
 import { expectAttributes, RootRouter, send } from '@youwol/http-primitives'
 import { firstValueFrom } from 'rxjs'
-import { setup$ } from './local-youwol-test-setup'
 import { Shell, shell$, testSetup$, testTearDown$ } from './shell'
 import {
     createProject,
@@ -26,15 +25,14 @@ class Context {
     }
 }
 
-beforeAll(async () => {
-    const beforeAll$ = setup$({
-        localOnly: true,
-        email: 'int_tests_yw-users@test-user',
-    })
-    await firstValueFrom(beforeAll$)
-})
 beforeEach(async () => {
-    await firstValueFrom(testSetup$())
+    await firstValueFrom(
+        testSetup$({
+            clearProjects: true,
+            localOnly: true,
+            email: 'int_tests_yw-users@test-user',
+        }),
+    )
 })
 afterEach(async () => {
     await firstValueFrom(testTearDown$(currentShell))
