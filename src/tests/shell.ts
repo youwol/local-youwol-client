@@ -620,7 +620,15 @@ export function testSetup$(params?: {
 
 export function testTearDown$(shell: Shell<unknown>) {
     if (!shell) {
-        return of(undefined)
+        return of(undefined).pipe(
+            addBookmarkLog({
+                text: `afterEach started, no shell to tear down`,
+            }),
+            addBookmarkLog({
+                text: `afterEach done`,
+            }),
+            resetTestCtxLabels(),
+        )
     }
     return of(shell).pipe(
         addBookmarkLog({
