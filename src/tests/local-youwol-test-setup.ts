@@ -3,12 +3,20 @@ import { PyYouwolClient } from '../lib'
 import { mergeMap, tap } from 'rxjs/operators'
 import { RootRouter } from '@youwol/http-primitives'
 
-export function setup$(
-    { localOnly, email }: { localOnly?: boolean; email?: string } = {
-        localOnly: true,
-        email: 'int_tests_yw-users@test-user',
-    },
-) {
+const defaultSetup = {
+    localOnly: true,
+    email: 'int_tests_yw-users@test-user',
+    clearProjects: false,
+}
+export function setup$({
+    localOnly,
+    email,
+    clearProjects,
+}: {
+    localOnly?: boolean
+    email?: string
+    clearProjects?: boolean
+} = defaultSetup) {
     State.clear()
     const headers = {
         'py-youwol-local-only': localOnly ? 'true' : 'false',
@@ -26,8 +34,13 @@ export function setup$(
             }),
         ),
         mergeMap(() => {
-            return new PyYouwolClient().admin.customCommands.doGet$({
+            return new PyYouwolClient().admin.customCommands.doPost$({
                 name: 'reset',
+                body: {
+                    projects: clearProjects || defaultSetup.clearProjects,
+                    components: false,
+                    system: true,
+                },
             })
         }),
         tap(() => {

@@ -595,7 +595,11 @@ export function addBookmarkLog<T>({
     }
 }
 
-export function testSetup$() {
+export function testSetup$(params?: {
+    localOnly?: boolean
+    email?: string
+    clearProjects?: boolean
+}) {
     return of(undefined).pipe(
         applyTestCtxLabels(),
         addBookmarkLog({
@@ -603,11 +607,11 @@ export function testSetup$() {
         }),
         mergeMap(() => {
             return ywSetup$({
-                localOnly: false,
-                email: 'int_tests_yw-users@test-user',
+                localOnly: params?.localOnly || false,
+                email: params?.email || 'int_tests_yw-users@test-user',
+                clearProjects: params?.clearProjects || false,
             })
         }),
-        applyTestCtxLabels(),
         addBookmarkLog({
             text: `beforeEach done`,
         }),
