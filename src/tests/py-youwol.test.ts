@@ -1,23 +1,24 @@
-import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
+import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
-import { setup$ } from './local-youwol-test-setup'
-import { tap } from 'rxjs/operators'
-import { applyTestCtxLabels, resetTestCtxLabels } from './shell'
-import { firstValueFrom, of } from 'rxjs'
+import { Shell, testSetup$, testTearDown$ } from './shell'
+import { firstValueFrom } from 'rxjs'
 
 const pyYouwol = new PyYouwolClient()
 
+const currentShell: Shell<unknown> = undefined
+
 beforeEach(async () => {
     await firstValueFrom(
-        setup$({
+        testSetup$({
             localOnly: true,
             email: 'int_tests_yw-users@test-user',
-        }).pipe(tap(() => applyTestCtxLabels())),
+            clearProjects: false,
+        }),
     )
 })
 
 afterEach(async () => {
-    await firstValueFrom(of(undefined).pipe(resetTestCtxLabels()))
+    await firstValueFrom(testTearDown$(currentShell))
 })
 
 test('query healthz', async () => {

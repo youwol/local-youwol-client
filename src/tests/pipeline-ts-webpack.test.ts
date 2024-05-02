@@ -18,6 +18,7 @@ beforeEach(async () => {
         setup$({
             localOnly: true,
             email: 'int_tests_yw-users@test-user',
+            clearProjects: true,
         }).pipe(tap(() => applyTestCtxLabels())),
     )
 })

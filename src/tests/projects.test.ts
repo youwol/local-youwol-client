@@ -113,6 +113,7 @@ beforeAll(async () => {
     const beforeAll$ = setup$({
         localOnly: true,
         email: 'int_tests_yw-users@test-user',
+        clearProjects: true,
     }).pipe(
         mergeMap(() =>
             pyYouwol.admin.customCommands.doPost$({
