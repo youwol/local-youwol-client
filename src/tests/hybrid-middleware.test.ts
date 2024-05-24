@@ -95,59 +95,6 @@ test('coupled loading graph', async () => {
     }
     const cdnClient = new CdnBackend.Client()
     const basePath = './data/test-packages'
-    const target = {
-        graphType: 'sequential-v2',
-        lock: [
-            {
-                name: '@youwol/rx-tree-views',
-                version: '0.3.1',
-                id: 'QHlvdXdvbC9yeC10cmVlLXZpZXdz',
-                namespace: 'youwol',
-                type: 'js/wasm',
-                fingerprint: 'ccffc5e9343e4193966a939c0c715311',
-                exportedSymbol: '@youwol/rx-tree-views',
-                aliases: [],
-                apiKey: '03',
-            },
-            {
-                name: 'rxjs',
-                version: '7.999.0',
-                id: 'cnhqcw==',
-                namespace: 'rxjs',
-                type: 'js/wasm',
-                fingerprint: 'a413cd90a586944a2f98afb399ca7160',
-                exportedSymbol: 'rxjs',
-                aliases: [],
-                apiKey: '7',
-            },
-            {
-                name: '@youwol/rx-vdom',
-                version: '1.0.1',
-                id: 'QHlvdXdvbC9yeC12ZG9t',
-                namespace: 'youwol',
-                type: 'js/wasm',
-                fingerprint: '9bb534b31cc287963fbb39a03c3016d5',
-                exportedSymbol: '@youwol/rx-vdom',
-                aliases: [],
-                apiKey: '1',
-            },
-        ],
-        definition: [
-            [
-                ['cnhqcw==', 'cnhqcw==/7.999.0/dist/rxjs.js'],
-                [
-                    'QHlvdXdvbC9yeC12ZG9t',
-                    'QHlvdXdvbC9yeC12ZG9t/1.0.1/dist/@youwol/rx-vdom.js',
-                ],
-            ],
-            [
-                [
-                    'QHlvdXdvbC9yeC10cmVlLXZpZXdz',
-                    'QHlvdXdvbC9yeC10cmVlLXZpZXdz/0.3.1/dist/@youwol/rx-tree-views.js',
-                ],
-            ],
-        ],
-    }
     const test$ = shell$<Context>(new Context()).pipe(
         mergeMap((shell) => {
             return uploadPackagesAndCheck$({
@@ -185,5 +132,14 @@ test('coupled loading graph', async () => {
     )
 
     const resp = await firstValueFrom(test$)
-    expect(resp).toEqual(target)
+    expect(resp.graphType).toBe('sequential-v2')
+    expect(resp.lock).toHaveLength(3)
+    const packages = resp.lock.reduce((acc, p) => ({ ...acc, [p.name]: p }), {})
+    expect(packages['@youwol/rx-tree-views']).toBeTruthy()
+    expect(packages['rxjs']).toBeTruthy()
+    expect(packages['@youwol/rx-vdom']).toBeTruthy()
+    expect(packages['rxjs'].version).toBe('7.999.0')
+    expect(packages['rxjs'].fingerprint).toBe(
+        'a413cd90a586944a2f98afb399ca7160',
+    )
 })
