@@ -162,7 +162,15 @@ test('py_backend pipeline happy path', async () => {
             sideEffects: (resp, shell) => {
                 expect(resp.youwolEnvironment.proxiedBackends).toHaveLength(1)
                 const proxy = resp.youwolEnvironment.proxiedBackends[0]
-                expectAttributes(proxy, ['name', 'version', 'port'])
+                expectAttributes(proxy, [
+                    'name',
+                    'version',
+                    'port',
+                    'partitionId',
+                    'uid',
+                    'startedAt',
+                    'configuration',
+                ])
                 expect(proxy.name).toBe(shell.context.name)
                 expect(proxy.version).toBe(shell.context.project.version)
             },
