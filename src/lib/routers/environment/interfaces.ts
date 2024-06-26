@@ -108,10 +108,18 @@ export interface YouwolEnvironment {
     remotes: CloudEnvironment[]
 }
 
+export class ProxiedBackendConfiguration {
+    build: { [key: string]: string }
+}
+
 export class ProxiedBackend {
     name: string
     version: string
     port: string
+    partitionId: string
+    uid: string
+    startedAt: number
+    configuration: ProxiedBackendConfiguration
 }
 
 export interface UserInfo {

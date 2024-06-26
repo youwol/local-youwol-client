@@ -55,9 +55,7 @@ export interface UninstallResponse {
 }
 
 export interface TerminateResponse {
-    name: string
-    version: string
-    wasRunning: boolean
+    uids: string[]
 }
 
 export interface DownloadEvent {
@@ -343,19 +341,25 @@ export class SystemRouter extends Router {
         })
     }
 
-    terminateBackend$({
-        name,
-        version,
-        callerOptions,
-    }: {
-        name: string
-        version: string
-        callerOptions?: CallerRequestOptions
-    }): HTTPResponse$<TerminateResponse> {
+    terminateBackend$(
+        params:
+            | {
+                  name: string
+                  version: string
+                  callerOptions?: CallerRequestOptions
+              }
+            | {
+                  uid: string
+                  callerOptions?: CallerRequestOptions
+              },
+    ): HTTPResponse$<TerminateResponse> {
+        const path = params['uid']
+            ? `/backends/${params['uid']}/terminate`
+            : `/backends/${params['name']}/${params['version']}/terminate`
         return this.send$({
             command: 'delete',
-            path: `/backends/${name}/${version}/terminate`,
-            callerOptions,
+            path,
+            callerOptions: params.callerOptions,
         })
     }
 }
