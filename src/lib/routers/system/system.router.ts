@@ -9,7 +9,6 @@ import {
 import { filter } from 'rxjs/operators'
 import { WsRouter } from '../../py-youwol.client'
 import { ContextMessage, GetFileContentResponse } from '../../interfaces'
-import { DocModuleResponse } from './doc.interfaces'
 
 export type Kind = 'package' | 'data' | 'flux-project' | 'story'
 export type DownloadEventType = 'enqueued' | 'started' | 'succeeded' | 'failed'
@@ -307,20 +306,6 @@ export class SystemRouter extends Router {
         return this.send$({
             command: 'query',
             path: `/backends/${name}/${version}/logs`,
-            callerOptions,
-        })
-    }
-
-    queryDocumentation({
-        path,
-        callerOptions,
-    }: {
-        path: string
-        callerOptions?: CallerRequestOptions
-    }): HTTPResponse$<DocModuleResponse> {
-        return this.send$({
-            command: 'query',
-            path: `/documentation/${path}`,
             callerOptions,
         })
     }
