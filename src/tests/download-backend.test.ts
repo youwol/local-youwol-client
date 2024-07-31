@@ -26,7 +26,7 @@ afterEach(async () => {
 
 test('download & install backend', async () => {
     class Context {}
-    const getTestPath = `${RootRouter.HostName}/backends/demo_yw_backend/0.1.0/docs`
+    const getTestPath = `${RootRouter.HostName}/backends/demo_yw_backend/^0.1.1/docs`
 
     const backendEvents$ = new ReplaySubject<{
         data: DownloadEvent | InstallBackendEvent
