@@ -3,17 +3,46 @@ export interface HealthzResponse {
     status: 'py-youwol ok'
 }
 
-export type Label = LocalYouwol.Label
+export type Label =
+    | 'Label.DONE'
+    | 'Label.LOG_INFO'
+    | 'Label.LOG_WARNING'
+    | 'Label.LOG_ERROR'
+    | 'Label.STARTED'
+    | 'Label.BASH'
+    | 'Label.LOG_ABORT'
+    | 'Label.EXCEPTION'
+    | 'Label.FAILED'
+    | 'Label.STD_OUTPUT'
+    | 'EnvironmentStatusResponse'
+    | 'PipelineStatusResponse'
+    | 'PipelineStepStatusResponse'
+    | 'PipelineStepEvent'
+    | 'ProjectStatusResponse'
+    | 'PackageDownloading'
+    | 'ArtifactsResponse'
+    | 'CdnResponse'
+    | 'CdnStatusResponse'
+    | 'CdnPackageResponse'
+    | 'CheckUpdateResponse'
+    | 'CheckUpdatesResponse'
+    | 'DownloadEvent'
+    | 'Label.PACKAGE_DOWNLOADING'
+    | 'DownloadedPackageResponse'
+    | 'PackageEventResponse'
+    | 'ProjectsLoadingResults'
+    | 'Label.PIPELINE_STEP_STATUS_PENDING'
+    | 'Label.PIPELINE_STEP_RUNNING'
+    | 'Label.RUN_PIPELINE_STEP'
+    | 'HelmPackage'
+    | 'Label.PROJECT_CREATING'
+    | 'InstallBackendEvent'
+    | 'BackendResponse'
+    | 'Label.INSTALL_BACKEND_SH'
+    | 'Label.START_BACKEND_SH'
+    | 'DownloadBackendEvent'
+    | 'StartBackendEvent'
 
-export interface ContextMessage<T = unknown> {
-    contextId: string
-    level: 'INFO' | 'WARNING' | 'ERROR'
-    text: string
-    labels: Label[]
-    parentContextId: string | undefined
-    data: T
-    attributes: { [key: string]: string }
-    timestamp: number
-}
+export type ContextMessage<T = unknown> = LocalYouwol.ContextMessage<T, Label>
 
 export type GetFileContentResponse = string

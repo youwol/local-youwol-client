@@ -24,13 +24,14 @@ import {
     CreateProjectFromTemplateResponse,
 } from './interfaces'
 import { WsRouter } from '../../py-youwol.client'
+import { Label } from '../../interfaces'
 
 class WebSocketAPI {
     constructor(public readonly ws: WsRouter) {}
 
-    status$(): WebSocketResponse$<ProjectsLoadingResultsResponse> {
+    status$(): WebSocketResponse$<ProjectsLoadingResultsResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<ProjectsLoadingResultsResponse>({
+            filterCtxMessage<ProjectsLoadingResultsResponse, Label>({
                 withLabels: ['ProjectsLoadingResults'],
             }),
         )
@@ -38,9 +39,9 @@ class WebSocketAPI {
 
     projectStatus$(
         filters: { projectId?: string } = {},
-    ): WebSocketResponse$<ProjectStatusResponse> {
+    ): WebSocketResponse$<ProjectStatusResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<ProjectStatusResponse>({
+            filterCtxMessage<ProjectStatusResponse, Label>({
                 withLabels: ['ProjectStatusResponse'],
                 withAttributes: filters,
             }),
@@ -49,9 +50,9 @@ class WebSocketAPI {
 
     pipelineStatus$(
         filters: { projectId?: string; flowId?: string } = {},
-    ): WebSocketResponse$<PipelineStatusResponse> {
+    ): WebSocketResponse$<PipelineStatusResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<PipelineStatusResponse>({
+            filterCtxMessage<PipelineStatusResponse, Label>({
                 withLabels: ['PipelineStatusResponse'],
                 withAttributes: filters,
             }),
@@ -60,9 +61,9 @@ class WebSocketAPI {
 
     pipelineStepStatus$(
         filters: { projectId?: string; flowId?: string; stepId?: string } = {},
-    ): WebSocketResponse$<PipelineStepStatusResponse> {
+    ): WebSocketResponse$<PipelineStepStatusResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<PipelineStepStatusResponse>({
+            filterCtxMessage<PipelineStepStatusResponse, Label>({
                 withLabels: ['PipelineStepStatusResponse'],
                 withAttributes: filters,
             }),
@@ -71,9 +72,9 @@ class WebSocketAPI {
 
     artifacts$(
         filters: { projectId?: string; flowId?: string } = {},
-    ): WebSocketResponse$<ArtifactsResponse> {
+    ): WebSocketResponse$<ArtifactsResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<ArtifactsResponse>({
+            filterCtxMessage<ArtifactsResponse, Label>({
                 withLabels: ['ArtifactsResponse'],
                 withAttributes: filters,
             }),
@@ -87,9 +88,9 @@ class WebSocketAPI {
             stepId?: string
             event?: PipelineStepEventKind
         } = {},
-    ): WebSocketResponse$<PipelineStepEvent> {
+    ): WebSocketResponse$<PipelineStepEvent, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<PipelineStepEvent>({
+            filterCtxMessage<PipelineStepEvent, Label>({
                 withLabels: ['PipelineStepEvent'],
                 withDataAttributes: filters,
             }),

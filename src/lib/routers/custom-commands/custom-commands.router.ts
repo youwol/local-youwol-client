@@ -8,6 +8,7 @@ import {
 } from '@youwol/http-primitives'
 
 import { WsRouter } from '../../py-youwol.client'
+import { Label } from '../../interfaces'
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
@@ -16,9 +17,9 @@ class WebSocketAPI {
 
     log$(
         filters: { commandName?: string; method?: Method } = {},
-    ): WebSocketResponse$<unknown> {
+    ): WebSocketResponse$<unknown, Label> {
         return this.ws.log$.pipe(
-            filterCtxMessage<unknown>({
+            filterCtxMessage<unknown, Label>({
                 withAttributes: { ...filters, topic: 'commands' },
             }),
         )

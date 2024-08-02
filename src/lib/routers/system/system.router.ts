@@ -8,7 +8,7 @@ import {
 
 import { filter } from 'rxjs/operators'
 import { WsRouter } from '../../py-youwol.client'
-import { ContextMessage, GetFileContentResponse } from '../../interfaces'
+import { ContextMessage, GetFileContentResponse, Label } from '../../interfaces'
 
 export type Kind = 'package' | 'data' | 'flux-project' | 'story'
 export type DownloadEventType = 'enqueued' | 'started' | 'succeeded' | 'failed'
@@ -93,9 +93,9 @@ class WebSocketAPI {
 
     downloadEvent$(
         filters: { rawId?: string; kind?: Kind; type?: DownloadEventType } = {},
-    ): WebSocketResponse$<DownloadEvent> {
+    ): WebSocketResponse$<DownloadEvent, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<DownloadEvent>({
+            filterCtxMessage<DownloadEvent, Label>({
                 withLabels: ['DownloadEvent'],
                 withAttributes: filters,
             }),
@@ -114,9 +114,9 @@ class WebSocketAPI {
             name?: string
             version?: Kind
         } = {},
-    ): WebSocketResponse$<InstallBackendEvent> {
+    ): WebSocketResponse$<InstallBackendEvent, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<InstallBackendEvent>({
+            filterCtxMessage<InstallBackendEvent, Label>({
                 withLabels: ['InstallBackendEvent'],
                 withAttributes: filters,
             }),
@@ -136,9 +136,9 @@ class WebSocketAPI {
             version?: string
             installId?: string
         } = {},
-    ): WebSocketResponse$<Record<never, never>> {
+    ): WebSocketResponse$<Record<never, never>, Label> {
         return this.ws.log$.pipe(
-            filterCtxMessage<Record<never, never>>({
+            filterCtxMessage<Record<never, never>, Label>({
                 withLabels: ['Label.INSTALL_BACKEND_SH'],
                 withAttributes: filters,
             }),
@@ -156,9 +156,9 @@ class WebSocketAPI {
             name?: string
             version?: Kind
         } = {},
-    ): WebSocketResponse$<InstallBackendEvent> {
+    ): WebSocketResponse$<InstallBackendEvent, Label> {
         return this.ws.log$.pipe(
-            filterCtxMessage<InstallBackendEvent>({
+            filterCtxMessage<InstallBackendEvent, Label>({
                 withLabels: ['Label.START_BACKEND_SH'],
                 withAttributes: filters,
             }),
@@ -176,9 +176,9 @@ class WebSocketAPI {
             name?: string
             version?: Kind
         } = {},
-    ): WebSocketResponse$<BackendResponse> {
+    ): WebSocketResponse$<BackendResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<BackendResponse>({
+            filterCtxMessage<BackendResponse, Label>({
                 withLabels: ['BackendResponse'],
                 withAttributes: filters,
             }),

@@ -19,16 +19,16 @@ import {
     UploadAssetResponse,
 } from './interfaces'
 import { WsRouter } from '../../py-youwol.client'
-import { GetFileContentResponse } from '../../interfaces'
+import { GetFileContentResponse, Label } from '../../interfaces'
 
 class WebSocketAPI {
     constructor(public readonly ws: WsRouter) {}
 
     status$(
         filters: { profile?: string } = {},
-    ): WebSocketResponse$<EnvironmentStatusResponse> {
+    ): WebSocketResponse$<EnvironmentStatusResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<EnvironmentStatusResponse>({
+            filterCtxMessage<EnvironmentStatusResponse, Label>({
                 withLabels: ['EnvironmentStatusResponse'],
                 withAttributes: filters,
             }),
