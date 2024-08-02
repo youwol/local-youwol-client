@@ -52,7 +52,7 @@
         "jest-jasmine2": "^29.3.1",
         "@youwol/webpm-client": "^3.0.0",
         "@youwol/http-clients": "^3.0.0",
-        "adm-zip": "^0.5.9"
+        "adm-zip": "0.5.10"
     },
     "webpm": {
         "dependencies": {
