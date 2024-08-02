@@ -34,6 +34,27 @@ class WebSocketAPI {
             }),
         )
     }
+
+    esmServerStdOut$(
+        filters: { proxyUid?: string; package?: string; version?: string } = {},
+    ) {
+        return this.ws.log$.pipe(
+            filterCtxMessage<unknown, Label>({
+                withLabels: ['Label.ESM_SERVER', 'Label.STD_OUTPUT'],
+                withAttributes: filters,
+            }),
+        )
+    }
+    esmServerDispatchLog$(
+        filters: { proxyUid?: string; package?: string; version?: string } = {},
+    ) {
+        return this.ws.log$.pipe(
+            filterCtxMessage<unknown, Label>({
+                withLabels: ['Label.DISPATCH_ESM_SERVER'],
+                withAttributes: filters,
+            }),
+        )
+    }
 }
 
 export class EnvironmentRouter extends Router {

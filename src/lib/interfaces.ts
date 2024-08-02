@@ -42,6 +42,8 @@ export type Label =
     | 'Label.START_BACKEND_SH'
     | 'DownloadBackendEvent'
     | 'StartBackendEvent'
+    | 'Label.ESM_SERVER'
+    | 'Label.DISPATCH_ESM_SERVER'
 
 export type ContextMessage<T = unknown> = LocalYouwol.ContextMessage<T, Label>
 
