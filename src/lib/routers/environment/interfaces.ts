@@ -105,6 +105,7 @@ export interface YouwolEnvironment {
     pathsBook: PathsBook
     projects?: Projects
     proxiedBackends: ProxiedBackend[]
+    proxiedEsmServers: ProxiedEsmServer[]
     remotes: CloudEnvironment[]
 }
 
@@ -120,6 +121,15 @@ export class ProxiedBackend {
     uid: string
     startedAt: number
     configuration: ProxiedBackendConfiguration
+}
+
+export class ProxiedEsmServer {
+    package: string
+    version: string
+    port: string
+    uid: string
+    pid?: string
+    serverPid?: string
 }
 
 export interface UserInfo {

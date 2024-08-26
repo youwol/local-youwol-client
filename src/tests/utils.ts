@@ -1,4 +1,8 @@
-import { expectAttributes, raiseHTTPErrors } from '@youwol/http-primitives'
+import {
+    expectAttributes,
+    HTTPError,
+    raiseHTTPErrors,
+} from '@youwol/http-primitives'
 import { combineLatest, forkJoin, Observable } from 'rxjs'
 import { filter, map, mergeMap, reduce, take, tap } from 'rxjs/operators'
 import { PyYouwolClient } from '../lib'
@@ -290,4 +294,8 @@ export function run$(
             reduce((acc, e) => [...acc, e], []),
         ),
     ]).pipe(map(([_, respWs]) => respWs.find((step) => step.stepId == stepId)))
+}
+
+export function isHTTPError(error: unknown): error is HTTPError {
+    return error instanceof HTTPError
 }

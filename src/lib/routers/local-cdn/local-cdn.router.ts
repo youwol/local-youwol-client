@@ -21,15 +21,16 @@ import {
     TriggerCollectUpdatesResponse,
 } from './interfaces'
 import { WsRouter } from '../../py-youwol.client'
+import { Label } from '../../interfaces'
 
 class WebSocketAPI {
     constructor(public readonly ws: WsRouter) {}
 
     status$(
         filters: { packageName?: string; packageVersion?: string } = {},
-    ): WebSocketResponse$<CdnStatusResponse> {
+    ): WebSocketResponse$<CdnStatusResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<CdnStatusResponse>({
+            filterCtxMessage<CdnStatusResponse, Label>({
                 withLabels: ['CdnStatusResponse'],
                 withAttributes: filters,
             }),
@@ -38,9 +39,9 @@ class WebSocketAPI {
 
     package$(
         filters: { packageId?: string } = {},
-    ): WebSocketResponse$<CdnPackageResponse> {
+    ): WebSocketResponse$<CdnPackageResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<CdnPackageResponse>({
+            filterCtxMessage<CdnPackageResponse, Label>({
                 withLabels: ['CdnPackageResponse'],
                 withAttributes: filters,
             }),
@@ -49,18 +50,18 @@ class WebSocketAPI {
 
     updateStatus$(
         filters: { packageName?: string; packageVersion?: string } = {},
-    ): WebSocketResponse$<CheckUpdateResponse> {
+    ): WebSocketResponse$<CheckUpdateResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<CheckUpdateResponse>({
+            filterCtxMessage<CheckUpdateResponse, Label>({
                 withLabels: ['CheckUpdateResponse'],
                 withAttributes: filters,
             }),
         )
     }
 
-    updatesStatus$(): WebSocketResponse$<CheckUpdatesResponse> {
+    updatesStatus$(): WebSocketResponse$<CheckUpdatesResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<CheckUpdatesResponse>({
+            filterCtxMessage<CheckUpdatesResponse, Label>({
                 withLabels: ['CheckUpdatesResponse'],
             }),
         )
@@ -68,9 +69,9 @@ class WebSocketAPI {
 
     downloadedPackage$(
         filters: { packageName?: string; packageVersion?: string } = {},
-    ): WebSocketResponse$<DownloadedPackageResponse> {
+    ): WebSocketResponse$<DownloadedPackageResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<DownloadedPackageResponse>({
+            filterCtxMessage<DownloadedPackageResponse, Label>({
                 withLabels: ['DownloadedPackageResponse'],
                 withAttributes: filters,
             }),
@@ -79,9 +80,9 @@ class WebSocketAPI {
 
     packageEvent$(
         filters: { packageName?: string; packageVersion?: string } = {},
-    ): WebSocketResponse$<PackageEventResponse> {
+    ): WebSocketResponse$<PackageEventResponse, Label> {
         return this.ws.data$.pipe(
-            filterCtxMessage<PackageEventResponse>({
+            filterCtxMessage<PackageEventResponse, Label>({
                 withLabels: ['PackageEventResponse'],
                 withAttributes: filters,
             }),

@@ -5,15 +5,10 @@ import {
     ExplorerBackend,
     AssetsGateway,
 } from '@youwol/http-clients'
-import {
-    HTTPError,
-    raiseHTTPErrors,
-    RootRouter,
-    send,
-} from '@youwol/http-primitives'
+import { raiseHTTPErrors, RootRouter, send } from '@youwol/http-primitives'
 import { map, mergeMap, reduce, takeWhile, tap } from 'rxjs/operators'
 import { firstValueFrom, forkJoin, merge, of, ReplaySubject } from 'rxjs'
-import { uploadPackagesAndCheck$ } from './utils'
+import { isHTTPError, uploadPackagesAndCheck$ } from './utils'
 import path from 'path'
 
 jest.setTimeout(100 * 1000)
@@ -58,7 +53,7 @@ beforeAll(async () => {
         //     return uploadPackages({filePaths: filePaths(versions), folderId: respDrive.homeFolderId, cdnClient })
         // }),
         mergeMap(([respCdn, respDrive]) => {
-            if (respCdn instanceof HTTPError /* && respCdn.status == 404*/) {
+            if (isHTTPError(respCdn)) {
                 if (respCdn.status !== 404) {
                     throw `Unexpected error code while getting library info ${respCdn.status}`
                 }

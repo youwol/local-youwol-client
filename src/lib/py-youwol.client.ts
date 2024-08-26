@@ -9,7 +9,7 @@ import {
 import { combineLatest, distinctUntilChanged, Observable } from 'rxjs'
 import { map, take } from 'rxjs/operators'
 
-import { ContextMessage, HealthzResponse } from './interfaces'
+import { ContextMessage, HealthzResponse, Label } from './interfaces'
 import { AdminRouter } from './routers/admin.router'
 import { PythonRouter } from './routers/python'
 
@@ -43,10 +43,10 @@ export class WsRouter {
             }),
         )
     }
-    public get log$(): WebSocketResponse$<unknown> {
+    public get log$(): WebSocketResponse$<unknown, Label> {
         return this._log.message$
     }
-    public get data$(): WebSocketResponse$<unknown> {
+    public get data$(): WebSocketResponse$<unknown, Label> {
         return this._data.message$
     }
 }

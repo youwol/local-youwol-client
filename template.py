@@ -20,7 +20,7 @@ template = Template(
     dependencies=Dependencies(
         runTime=RunTimeDeps(
             externals={
-                "@youwol/http-primitives": "^0.2.3",
+                "@youwol/http-primitives": "^0.2.5",
                 "rxjs": "^7.5.6"
             }
         ),
@@ -28,7 +28,9 @@ template = Template(
             "jest-jasmine2": "^29.3.1",
             "@youwol/webpm-client": "^3.0.0",
             "@youwol/http-clients": "^3.0.0",
-            "adm-zip": "^0.5.9"
+            # Auto upgrade (to 0.5.14) leads to test 'download-assets.test.ts#249' being broken.
+            # Fix it for now.
+            "adm-zip": "0.5.10"
         }
     ),
     bundles=Bundles(
