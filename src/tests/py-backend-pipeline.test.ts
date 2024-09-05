@@ -68,7 +68,7 @@ function expectDependenciesStep(
     expect(stepResp.stepId).toBe('dependencies')
     expect(stepResp.status).toBe('OK')
     expect(stepResp.manifest.files).toHaveLength(1)
-    expect(stepResp.manifest.files[0].endsWith('requirements.txt')).toBeTruthy()
+    expect(stepResp.manifest.files[0].endsWith('pyproject.toml')).toBeTruthy()
     expect(stepResp.artifacts).toHaveLength(0)
 }
 
