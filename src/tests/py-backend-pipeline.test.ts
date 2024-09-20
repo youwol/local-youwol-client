@@ -41,7 +41,7 @@ afterEach(async () => {
 function expectProject(resp: Routers.Projects.Project, name: string) {
     expect(resp.path.endsWith(`${name}_project`)).toBeTruthy()
     expect(resp.name).toBe(name)
-    expect(resp.pipeline.steps).toHaveLength(6)
+    expect(resp.pipeline.steps).toHaveLength(8)
     expect(resp.pipeline.flows).toHaveLength(1)
 }
 
@@ -57,7 +57,7 @@ function expectSetupStep(
     expect(stepResp.manifest.cmdOutputs['package_json']).toEqual({
         name,
         version: '0.1.0',
-        main: 'start.sh',
+        main: `dist/${name}-0.1.0-py3-none-any.whl`,
         webpm: { type: 'backend' },
     })
 }
@@ -67,7 +67,7 @@ function expectDependenciesStep(
 ) {
     expect(stepResp.stepId).toBe('dependencies')
     expect(stepResp.status).toBe('OK')
-    expect(stepResp.manifest.files).toHaveLength(1)
+    expect(stepResp.manifest.files).toHaveLength(2)
     expect(stepResp.manifest.files[0].endsWith('pyproject.toml')).toBeTruthy()
     expect(stepResp.artifacts).toHaveLength(0)
 }
