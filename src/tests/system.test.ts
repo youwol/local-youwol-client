@@ -113,7 +113,7 @@ test('pyYouwol.admin.system.queryFolderContent', async () => {
         raiseHTTPErrors(),
         mergeMap((status) => {
             return pyYouwol.admin.system.queryFolderContent$({
-                path: path.dirname(status.configuration.pathsBook.config),
+                path: path.dirname(status.youwolEnvironment.pathsBook.config),
             })
         }),
         raiseHTTPErrors(),
@@ -129,7 +129,7 @@ test('pyYouwol.admin.system.getFileContent', async () => {
         raiseHTTPErrors(),
         mergeMap((status) => {
             return pyYouwol.admin.system.getFileContent$({
-                path: status.configuration.pathsBook.config,
+                path: status.youwolEnvironment.pathsBook.config,
             })
         }),
         raiseHTTPErrors(),
