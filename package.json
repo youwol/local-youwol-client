@@ -1,7 +1,7 @@
 {
     "name": "@youwol/local-youwol-client",
     "description": "Client for local py-youwol",
-    "version": "0.3.2",
+    "version": "0.3.3-wip",
     "author": "greinisch@youwol.com",
     "homepage": "https://github.com/youwol/local-youwol-client#README.md",
     "main": "dist/@youwol/local-youwol-client.js",
