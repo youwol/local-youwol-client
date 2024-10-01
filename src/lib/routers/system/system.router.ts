@@ -19,6 +19,13 @@ export interface QueryFolderContentResponse {
     files: string[]
 }
 
+export interface OpenFolderBody {
+    path: string
+}
+export interface OpenFolderResponse {
+    status: string
+}
+
 export interface LogResponse<T = unknown> extends ContextMessage<T> {
     /**
      * Deprecated, use 'status'
@@ -214,6 +221,24 @@ export class SystemRouter extends Router {
             nativeRequestOptions: {
                 method: 'POST',
                 json: { path },
+            },
+            callerOptions,
+        })
+    }
+
+    openFolder$({
+        body,
+        callerOptions,
+    }: {
+        body: OpenFolderBody
+        callerOptions?: CallerRequestOptions
+    }): HTTPResponse$<OpenFolderResponse> {
+        return this.send$({
+            command: 'query',
+            path: `/folder-open`,
+            nativeRequestOptions: {
+                method: 'POST',
+                json: body,
             },
             callerOptions,
         })

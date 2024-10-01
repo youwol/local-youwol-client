@@ -1,5 +1,9 @@
 import { mergeMap, tap } from 'rxjs/operators'
-import { raiseHTTPErrors, expectAttributes } from '@youwol/http-primitives'
+import {
+    raiseHTTPErrors,
+    expectAttributes,
+    onHTTPErrors,
+} from '@youwol/http-primitives'
 import { PyYouwolClient } from '../lib'
 import { setup$ } from './local-youwol-test-setup'
 import path from 'path'
@@ -109,7 +113,7 @@ test('pyYouwol.admin.system.queryFolderContent', async () => {
         raiseHTTPErrors(),
         mergeMap((status) => {
             return pyYouwol.admin.system.queryFolderContent$({
-                path: path.dirname(status.configuration.pathsBook.config),
+                path: path.dirname(status.youwolEnvironment.pathsBook.config),
             })
         }),
         raiseHTTPErrors(),
@@ -125,11 +129,36 @@ test('pyYouwol.admin.system.getFileContent', async () => {
         raiseHTTPErrors(),
         mergeMap((status) => {
             return pyYouwol.admin.system.getFileContent$({
-                path: status.configuration.pathsBook.config,
+                path: status.youwolEnvironment.pathsBook.config,
             })
         }),
         raiseHTTPErrors(),
     )
     const resp = await firstValueFrom(test$)
     expect(resp).toBeTruthy()
+})
+
+test('pyYouwol.admin.system.openFolder', async () => {
+    const test$ = pyYouwol.admin.environment.getStatus$().pipe(
+        raiseHTTPErrors(),
+        mergeMap((status) => {
+            return pyYouwol.admin.system.openFolder$({
+                body: { path: status.youwolEnvironment.pathsBook.system },
+            })
+        }),
+        onHTTPErrors((error) => {
+            if (
+                error.status == 500 &&
+                error.body['detail'].startsWith(
+                    'Error opening path in file explorer',
+                )
+            ) {
+                // E.g. in CI it is likely that there are no file explorer to open
+                return { status: 'Failure tolerated' }
+            }
+            return error
+        }),
+    )
+    const resp = await firstValueFrom(test$)
+    expect(resp.status).toBeTruthy()
 })
