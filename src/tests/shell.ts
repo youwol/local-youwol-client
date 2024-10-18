@@ -595,6 +595,24 @@ export function addBookmarkLog<T>({
     }
 }
 
+export function printServerStdOut<T>({ text }: { text: string }) {
+    return (source$: Observable<T>) => {
+        return source$.pipe(
+            mergeMap((source) => {
+                return new PyYouwolClient().admin.customCommands
+                    .doPost$({
+                        name: 'print-server-std-out',
+                        body: { text: `TEST-INFO:     ${text}` },
+                    })
+                    .pipe(
+                        raiseHTTPErrors(),
+                        map(() => source),
+                    )
+            }),
+        )
+    }
+}
+
 export function testSetup$(params?: {
     localOnly?: boolean
     email?: string
