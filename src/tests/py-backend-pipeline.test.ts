@@ -57,6 +57,7 @@ function expectSetupStep(
 ) {
     expect(stepResp.stepId).toBe('setup')
     expect(stepResp.status).toBe('OK')
+    expect(stepResp.manifest.succeeded).toBeTruthy()
     expect(stepResp.manifest.files).toHaveLength(1)
     expect(stepResp.manifest.files[0].endsWith('pyproject.toml')).toBeTruthy()
     expect(stepResp.artifacts).toHaveLength(0)
@@ -73,6 +74,7 @@ function expectDependenciesStep(
 ) {
     expect(stepResp.stepId).toBe('dependencies')
     expect(stepResp.status).toBe('OK')
+    expect(stepResp.manifest.succeeded).toBeTruthy()
     expect(stepResp.manifest.files).toHaveLength(2)
     expect(stepResp.manifest.files[0].endsWith('pyproject.toml')).toBeTruthy()
     expect(stepResp.artifacts).toHaveLength(0)
@@ -84,6 +86,7 @@ function expectPackageStep(
 ) {
     expect(stepResp.stepId).toBe('package')
     expect(stepResp.status).toBe('OK')
+    expect(stepResp.manifest.succeeded).toBeTruthy()
     expect(
         stepResp.manifest.files.find((file) =>
             file.endsWith(`dist/${name}-0.1.0-py3-none-any.whl`),
@@ -107,6 +110,7 @@ function expectCdnLocalStep(
 ) {
     expect(stepResp.stepId).toBe('cdn-local')
     expect(stepResp.status).toBe('OK')
+    expect(stepResp.manifest.succeeded).toBeTruthy()
     expect(stepResp.manifest.succeeded).toBeTruthy()
     expect(stepResp.manifest.fingerprint).toBeTruthy()
 }
