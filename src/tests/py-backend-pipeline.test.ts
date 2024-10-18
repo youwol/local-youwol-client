@@ -2,7 +2,13 @@ import { PyYouwolClient, Routers } from '../lib'
 import { delay, tap } from 'rxjs/operators'
 import { expectAttributes, RootRouter, send } from '@youwol/http-primitives'
 import { firstValueFrom } from 'rxjs'
-import { Shell, shell$, testSetup$, testTearDown$ } from './shell'
+import {
+    printServerStdOut,
+    Shell,
+    shell$,
+    testSetup$,
+    testTearDown$,
+} from './shell'
 import {
     createProject,
     getEnvironmentStatus,
@@ -108,6 +114,9 @@ function expectCdnLocalStep(
 test('py_backend pipeline happy path', async () => {
     const test$ = shell$(new Context()).pipe(
         tap((shell) => (currentShell = shell)),
+        printServerStdOut({
+            text: "Create project from py-backend pipeline's template.",
+        }),
         createProject({
             inputs: (shell) => ({
                 body: {
@@ -129,6 +138,9 @@ test('py_backend pipeline happy path', async () => {
                 expect(resp.results).toHaveLength(1)
             },
         }),
+        printServerStdOut({
+            text: "Run 'setup' step.",
+        }),
         runStep({
             inputs: (shell) => ({
                 projectName: shell.context.project.name,
@@ -138,6 +150,9 @@ test('py_backend pipeline happy path', async () => {
                 expectSetupStep(resp, shell.context.name)
             },
         }),
+        printServerStdOut({
+            text: "Run 'dependencies' step.",
+        }),
         runStep({
             inputs: (shell) => ({
                 projectName: shell.context.project.name,
@@ -146,6 +161,9 @@ test('py_backend pipeline happy path', async () => {
             sideEffects: (resp) => {
                 expectDependenciesStep(resp)
             },
+        }),
+        printServerStdOut({
+            text: "Run 'run' step.",
         }),
         tap((shell) => {
             // This step won't finish, until 'stop_backend' is called
@@ -159,7 +177,7 @@ test('py_backend pipeline happy path', async () => {
         }),
         delay(1000),
         getEnvironmentStatus({
-            sideEffects: (resp, shell) => {
+            sideEffects: (resp, shell: Shell<Context>) => {
                 expect(resp.youwolEnvironment.proxiedBackends).toHaveLength(1)
                 const proxy = resp.youwolEnvironment.proxiedBackends[0]
                 expectAttributes(proxy, [
@@ -175,6 +193,9 @@ test('py_backend pipeline happy path', async () => {
                 expect(proxy.version).toBe(shell.context.project.version)
             },
         }),
+        printServerStdOut({
+            text: "Check 'GET:/hello-world' HTTP request.",
+        }),
         send<string, Context>({
             inputs: (shell) => {
                 const project = shell.context.project
@@ -187,6 +208,9 @@ test('py_backend pipeline happy path', async () => {
                 expect(resp.endpoint).toBe('/hello-world')
             },
         }),
+        printServerStdOut({
+            text: 'Stop running backend.',
+        }),
         tap((shell) => {
             return pyYouwol.admin.projects
                 .executeStepGetCommand$({
@@ -198,6 +222,9 @@ test('py_backend pipeline happy path', async () => {
                 .subscribe()
         }),
         delay(1000),
+        printServerStdOut({
+            text: "Check 'GET:/hello-world' HTTP request -> 404 expected.",
+        }),
         send<string, Context>({
             inputs: (shell) => {
                 const project = shell.context.project
@@ -213,6 +240,9 @@ test('py_backend pipeline happy path', async () => {
                 expect(resp.youwolEnvironment.proxiedBackends).toHaveLength(0)
             },
         }),
+        printServerStdOut({
+            text: "Run 'package' step",
+        }),
         runStep({
             inputs: (shell: Shell<Context>) => ({
                 projectName: shell.context.project.name,
@@ -222,6 +252,9 @@ test('py_backend pipeline happy path', async () => {
                 expectPackageStep(resp, shell.context.name)
             },
         }),
+        printServerStdOut({
+            text: "Run 'cdn-local' step",
+        }),
         runStep({
             inputs: (shell: Shell<Context>) => ({
                 projectName: shell.context.project.name,
@@ -230,6 +263,9 @@ test('py_backend pipeline happy path', async () => {
             sideEffects: (resp) => {
                 expectCdnLocalStep(resp)
             },
+        }),
+        printServerStdOut({
+            text: "Install backend from HTTP request 'GET:/docs'",
         }),
         installBackend({
             inputs: (shell: Shell<Context>) => {
